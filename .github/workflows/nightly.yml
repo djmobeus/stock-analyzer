@@ -1,0 +1,45 @@
+# Nightly stock screening pipeline
+# Runs at 17:30 UK time on weekdays (after LSE close at 16:30)
+# Requires secrets: FINNHUB_API_KEY, DATABASE_URL (Supabase)
+
+name: Nightly Pipeline
+
+on:
+  schedule:
+    # 17:30 UK = 16:30 UTC (BST) / 17:30 UTC (GMT winter)
+    # Adjust cron when clocks change; 16:30 UTC covers BST
+    - cron: "30 16 * * 1-5"
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run nightly pipeline
+        env:
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/run_nightly.py
+
+      - name: Upload morning report artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: morning-report
+          path: reports/morning_*.html
+          retention-days: 7

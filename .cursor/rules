@@ -1,0 +1,144 @@
+# UK Stock Analyzer — Development Rules
+
+## Project context
+
+This is a UK stock screening and analysis tool for a **self-directed retail investor who is not a professional developer**. The owner trades FTSE 100/250 stocks on Interactive Investor with 2–8 week holds.
+
+All code, comments, and explanations should assume the reader may not have deep software engineering experience.
+
+---
+
+## Core principles
+
+### 1. Prefer simple solutions over complex ones
+
+- Choose the straightforward approach that solves the problem
+- Do not introduce abstractions "for future flexibility" unless explicitly requested
+- One Python package, one database, one dashboard — no microservices in v1
+- If a feature can be a 20-line function, do not build a class hierarchy
+
+### 2. Use widely adopted libraries
+
+Preferred stack (do not substitute without documenting in `docs/decisions.md`):
+
+| Purpose | Library |
+|---------|---------|
+| Data | pandas, numpy |
+| Prices | yfinance |
+| Indicators | pandas-ta |
+| ML | scikit-learn |
+| Sentiment | vaderSentiment, transformers (FinBERT) |
+| Embeddings | sentence-transformers |
+| Dashboard | streamlit, plotly |
+| Database | sqlite3 (local), supabase/psycopg2 (cloud) |
+| Tests | pytest |
+| Templates | jinja2 |
+
+### 3. Explain complex code with comments
+
+- Add comments for non-obvious business logic (e.g. GBX normalisation, confluence scoring)
+- Add docstrings to public functions explaining what, not how
+- Do not comment obvious code (`# increment counter` is not helpful)
+- Financial terms should be clear: GBX = pence, catalyst = dated corporate event
+
+### 4. Avoid unnecessary frameworks
+
+Do not add without explicit approval:
+
+- FastAPI, Django, Flask (Streamlit is the UI)
+- Celery, Redis, RabbitMQ
+- Docker (unless deployment requires it)
+- ORMs heavier than raw SQL with thin repository helpers
+- Frontend frameworks (React, Vue) — Streamlit only
+
+### 5. Modify only necessary lines of code
+
+- Smallest correct diff for each change
+- Do not refactor unrelated code in the same edit
+- Do not rename files or reorganise packages unless the task requires it
+- Match existing naming, import style, and patterns in the file being edited
+
+---
+
+## Data accuracy rules (investment context)
+
+This software informs real investment decisions. Accuracy rules are non-negotiable:
+
+1. **Always normalise LSE prices to GBX (pence)** — never assume yfinance units are correct
+2. **Quarantine suspicious prices** — do not include in scoring until validated
+3. **Never use `yfinance repair=True` blindly** — it can corrupt valid GBp data
+4. **Walk-forward validation only** — never random train/test split on time-series data
+5. **Show "insufficient data"** rather than unreliable ML predictions below 100 labelled outcomes
+6. **Frame all output as analysis, not advice** — "The technical picture shows…" not "You should buy"
+
+---
+
+## Code style
+
+- Python 3.11+
+- Type hints on function signatures where helpful
+- `snake_case` for functions and variables
+- `PascalCase` for classes (use sparingly)
+- Constants in `UPPER_SNAKE_CASE`
+- Config in `config/config.yaml`, secrets in `.env` (never committed)
+
+---
+
+## File and directory conventions
+
+```
+src/          # Core application code
+app/          # Streamlit dashboard only
+scripts/      # CLI entry points (run_nightly.py, run_backtest.py)
+tests/        # pytest tests mirroring src/ structure
+config/       # config.yaml (committed)
+data/         # SQLite db, CSV exclusion lists (db gitignored)
+logs/         # Pipeline logs (gitignored)
+reports/      # Generated HTML reports (committed or gitignored per preference)
+docs/         # Documentation
+```
+
+---
+
+## Testing expectations
+
+- Write pytest for: GBX normalisation, indicator calculations, scoring logic, catalyst regex
+- Do not write trivial tests that only assert `True`
+- Run tests before marking a task complete
+
+---
+
+## Git and secrets
+
+- Never commit `.env`, `*.db`, `*.pkl`, API keys, or logs
+- Use `.env.example` with placeholder variable names
+- Commit messages: clear, present tense ("Add GBX normalisation" not "Added stuff")
+
+---
+
+## Cost awareness
+
+- Default to free tier services (yfinance, Finnhub, GitHub Actions, Streamlit Cloud, Supabase)
+- Local ML and FinBERT inference — no paid cloud GPU
+- Optional Anthropic Haiku only for prose summaries — batch and cache calls
+- Flag any change that would add recurring cost in PR/commit message
+
+---
+
+## When stuck
+
+- Read `project_spec.md` for product intent
+- Read `docs/architecture.md` for system design
+- Read `docs/decisions.md` before changing technology choices
+- Update `docs/progress.md` and `docs/tasks.md` when completing phases
+
+---
+
+## AI assistant behaviour in this project
+
+1. Implement working code, not pseudocode
+2. Run commands and tests to verify changes
+3. Explain what was built in plain English after each significant change
+4. Ask before adding new dependencies not in the approved stack
+5. Ask before changing architecture decisions recorded in `docs/decisions.md`
+6. Keep the owner informed of trade-offs, especially around data accuracy vs cost
