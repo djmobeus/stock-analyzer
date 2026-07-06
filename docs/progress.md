@@ -30,7 +30,9 @@ Last updated: 2026-07-06
 - [x] `docs/progress.md` created (this file)
 - [x] `docs/tasks.md` created
 - [x] `.cursor/rules` created
-- [ ] Private GitHub repository created and initial push
+- [x] Initial git commit on `main` branch
+- [x] `docs/github_setup.md` — private repo instructions
+- [ ] Private GitHub repository created and pushed (requires `gh auth login`)
 - [ ] Python project scaffold (`src/`, `requirements.txt`, etc.)
 
 ---
