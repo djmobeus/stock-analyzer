@@ -1,0 +1,31 @@
+ticker,sector,notes
+SHEL.L,Energy,FTSE 100 large cap oil
+AZN.L,Healthcare,FTSE 100 pharma
+HSBA.L,Financials,FTSE 100 bank
+ULVR.L,Consumer,FTSE 100 staples
+GSK.L,Healthcare,FTSE 100 pharma
+BARC.L,Financials,FTSE 100 bank
+LLOY.L,Financials,FTSE 100 bank
+RIO.L,Materials,FTSE 100 mining
+GLEN.L,Materials,FTSE 100 mining USD reporting
+BP.L,Energy,FTSE 100 oil
+VOD.L,Telecom,FTSE 100
+REL.L,Industrials,FTSE 100
+DGE.L,Consumer,FTSE 100 spirits
+NG.L,Utilities,FTSE 100
+LSEG.L,Financials,FTSE 100 exchange
+AAL.L,Materials,FTSE 100 mining
+ANTO.L,Materials,FTSE 250 copper USD reporting
+CHG.L,Healthcare,FTSE 250 mid cap
+KNOS.L,Technology,FTSE 250 software
+JET2.L,Consumer,FTSE 250 airlines
+CCH.L,Consumer,FTSE 250 beverages
+WEIR.L,Industrials,FTSE 250 engineering
+MONY.L,Financials,FTSE 250 fintech
+PETS.L,Consumer,FTSE 250 retail
+MNDI.L,Materials,FTSE 250 packaging
+HIK.L,Healthcare,FTSE 250 pharma
+PRU.L,Financials,FTSE 100 insurer
+IMI.L,Industrials,FTSE 250 engineering
+SMWH.L,Consumer,FTSE 250 retail
+OXIG.L,Industrials,FTSE 250 industrial gases

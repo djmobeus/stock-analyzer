@@ -13,6 +13,8 @@ Nightly screening system for FTSE 100 and FTSE 250 stocks — technical analysis
 | [docs/decisions.md](docs/decisions.md) | Technology choices and rationale |
 | [docs/tasks.md](docs/tasks.md) | Development roadmap |
 | [docs/progress.md](docs/progress.md) | Progress tracker |
+| [docs/cloud_setup.md](docs/cloud_setup.md) | **100% cloud setup (no PC required)** |
+| [docs/streamlit_deploy.md](docs/streamlit_deploy.md) | Streamlit Cloud deployment |
 
 ## Quick start (local development)
 
@@ -20,7 +22,7 @@ Nightly screening system for FTSE 100 and FTSE 250 stocks — technical analysis
 
 - Python 3.11+
 - Git
-- [Finnhub](https://finnhub.io/register) free API key
+- Supabase `DATABASE_URL` (or leave empty for local SQLite)
 
 ### Setup
 
@@ -28,16 +30,21 @@ Nightly screening system for FTSE 100 and FTSE 250 stocks — technical analysis
 cd "c:\Users\PMouzakis\Dropbox\Stock Analyzer"
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-core.txt
 copy .env.example .env
-# Edit .env and add FINNHUB_API_KEY
+# Edit .env — add DATABASE_URL (optional Finnhub key)
+python scripts/init_db.py
+python scripts/run_phase0_validation.py
+python -m pytest tests/ -v
 ```
 
-### Run (once implemented)
+### Run
 
 ```powershell
-python scripts/run_nightly.py      # Nightly pipeline
-streamlit run app/streamlit_app.py # Dashboard
+python scripts/run_nightly.py --force   # Nightly pipeline (add --limit 5 to test)
+python scripts/run_outcomes.py          # Update 2/4/8-week outcomes
+python scripts/run_backtest.py          # Backtest shadow candidates
+streamlit run app/streamlit_app.py      # Dashboard
 ```
 
 ## Hosting (free, PC can be off)
@@ -64,7 +71,7 @@ Months 1–3 rely on rule-based composite scoring. ML augments later.
 ## Cost
 
 - **Infrastructure:** £0/month (GitHub Actions + Streamlit Cloud + Supabase)
-- **Data APIs:** £0 (yfinance, Finnhub free tier, RSS)
+- **Data APIs:** £0 (yfinance, RSS; Finnhub optional)
 - **Optional LLM:** ~£3–5/month (Anthropic Haiku for morning summaries only)
 
 ## License

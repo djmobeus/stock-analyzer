@@ -83,18 +83,21 @@ This document records key architectural and technology choices, the rationale be
 
 ---
 
-## ADR-006: Finnhub free tier for fundamentals and analyst data
+## ADR-006: yfinance for UK fundamentals and analyst data (supersedes Finnhub)
 
-**Decision:** Finnhub for analyst recommendations, price targets, company profile, and financials.
+**Decision:** Use yfinance for analyst recommendations, price targets, sector/industry, and FCF filtering on LSE tickers. Finnhub remains optional for US quote cross-checks only.
 
 **Why:**
-- Free tier: 60 calls/minute, sufficient for ~150 stocks nightly with caching
-- Structured JSON API — no fragile web scraping
-- Covers analyst count filter (4+ analysts)
+- Finnhub free tier returns 403 on LSE endpoints — US-only
+- yfinance covers FTSE 100/250 with no API key and no rate-limit signup
+- Sufficient for filters 4–6 (analyst count, trust/REIT exclusion, positive FCF)
 
 **Alternatives rejected:**
-- Stockopedia / Simply Wall St scraping — breaks often, ToS risk, maintenance burden
-- yfinance alone — incomplete analyst coverage for FTSE 250
+- Finnhub paid tier — unnecessary cost for v1
+- Stockopedia / Simply Wall St scraping — breaks often, ToS risk
+- Finnhub free for UK — not available
+
+**Status:** Supersedes original ADR-006 (Finnhub free tier) as of 2026-07-07.
 
 ---
 
@@ -236,7 +239,7 @@ sector_relative:       0.05
 | ADR-003 | 2026-07-06 | GitHub Actions cron | Accepted |
 | ADR-004 | 2026-07-06 | Streamlit Community Cloud | Accepted |
 | ADR-005 | 2026-07-06 | yfinance + validation | Accepted |
-| ADR-006 | 2026-07-06 | Finnhub free tier | Accepted |
+| ADR-006 | 2026-07-07 | yfinance fundamentals (Finnhub optional) | Accepted |
 | ADR-007 | 2026-07-06 | pandas-ta | Accepted |
 | ADR-008 | 2026-07-06 | Hybrid local/paid LLM | Accepted |
 | ADR-009 | 2026-07-06 | scikit-learn ML | Accepted |

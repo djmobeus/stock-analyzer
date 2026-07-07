@@ -4,13 +4,29 @@ The local git repository is initialised with an initial commit. Follow these ste
 
 ## Step 1 — Log in to GitHub CLI
 
-Open PowerShell and run:
+Open a **new** PowerShell window (important — so `gh` is on your PATH after install), then run:
 
 ```powershell
 gh auth login
 ```
 
-Choose:
+If you see `gh : The term 'gh' is not recognized`, either:
+
+1. **Close and reopen PowerShell** (or restart Cursor), then try again, or
+2. **Use the full path** (works immediately):
+
+```powershell
+& "C:\Program Files\GitHub CLI\gh.exe" auth login
+```
+
+To permanently fix PATH in your current session without restarting:
+
+```powershell
+$env:Path += ";C:\Program Files\GitHub CLI"
+gh --version
+```
+
+Choose during login:
 - **GitHub.com**
 - **HTTPS**
 - **Login with a web browser** (easiest)
@@ -50,22 +66,24 @@ Replace `YOUR_USERNAME` with your GitHub username.
 
 ## Step 3 — Add GitHub Actions secrets
 
-After the repo exists, add secrets for the nightly pipeline:
+After the repo exists, add secrets for the nightly pipeline.
+
+**Full cloud checklist:** see [docs/cloud_setup.md](cloud_setup.md)
+
+If `gh` is not recognized, use the full path or refresh PATH first (see Step 1).
 
 ```powershell
-gh secret set FINNHUB_API_KEY
-# Paste your Finnhub key when prompted
-
-gh secret set DATABASE_URL
-# Paste Supabase PostgreSQL URL when ready (Phase 6)
-
-# Optional:
-gh secret set ANTHROPIC_API_KEY
+& "C:\Program Files\GitHub CLI\gh.exe" secret set DATABASE_URL
+& "C:\Program Files\GitHub CLI\gh.exe" secret set EMAIL_TO
+& "C:\Program Files\GitHub CLI\gh.exe" secret set SMTP_USER
+& "C:\Program Files\GitHub CLI\gh.exe" secret set SMTP_PASSWORD
+& "C:\Program Files\GitHub CLI\gh.exe" secret set EMAIL_FROM
+& "C:\Program Files\GitHub CLI\gh.exe" secret set ANTHROPIC_API_KEY
 ```
 
 Or add via GitHub web UI: **Settings → Secrets and variables → Actions → New repository secret**
 
-## Step 4 — Deploy Streamlit Cloud (Phase 6)
+## Step 4 — Deploy Streamlit Cloud
 
 1. Go to https://share.streamlit.io/
 2. Sign in with GitHub

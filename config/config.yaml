@@ -1,0 +1,53 @@
+# UK pipeline schedule (Europe/London)
+# Run: Mon–Fri 05:00 UK → morning briefing before LSE open (08:00)
+# Captures overnight RNS/news after previous session close
+schedule:
+  run_weekdays: [monday, tuesday, wednesday, thursday, friday]
+  skip_weekdays: [saturday, sunday]
+  run_time_uk: "05:00"
+
+scoring:
+  support_proximity: 0.25
+  multi_tf_confluence: 0.20
+  analyst_upside: 0.15
+  catalyst_proximity: 0.15
+  news_sentiment: 0.10
+  market_regime: 0.10
+  sector_relative: 0.05
+
+# Data quality thresholds
+data_quality:
+  max_daily_jump_pct: 25.0
+  min_price_gbx: 1.0
+  max_price_gbx: 500000.0
+  stale_days: 5
+
+# Universe filters (Phase 1+)
+universe:
+  min_avg_volume: 500000
+  min_market_cap_gbp: 300000000
+  min_analyst_count: 4
+
+# Outcome tracking (Phase 4)
+outcomes:
+  target_hit_pct: 8.0
+  stop_loss_pct: -5.0
+
+# Machine learning (Phase 5)
+ml:
+  min_samples_logistic: 100
+  min_samples_forest: 300
+  retrain_min_new_outcomes: 5
+
+# Email morning digest (Gmail SMTP)
+email:
+  enabled: true
+  # Set EMAIL_TO in .env / GitHub secrets (e.g. you@p-mouzakis.com)
+
+# RSS feeds for UK market news
+news:
+  feeds:
+    - name: proactive
+      url: https://www.proactiveinvestors.co.uk/rss/articles
+    - name: investegate
+      url: https://www.investegate.co.uk/rss/latest

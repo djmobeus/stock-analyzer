@@ -1,30 +1,34 @@
 #!/usr/bin/env python3
 """
-Nightly pipeline entry point.
-
-Runs the full stock screening batch: prices, indicators, fundamentals,
-news, scoring, shadow logging, and morning report generation.
+Nightly stock screening pipeline entry point.
 
 Usage:
     python scripts/run_nightly.py
-
-Scheduled via GitHub Actions on weekdays at 17:30 UK, or locally via
-Task Scheduler / manual run.
+    python scripts/run_nightly.py --limit 5   # test on 5 stocks
 """
 
+import argparse
 import sys
 from pathlib import Path
 
-# Allow imports from src/ before package is fully scaffolded
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+from pipeline.nightly import run_nightly_pipeline, setup_logging  # noqa: E402
+
 
 def main() -> int:
-    print("UK Stock Analyzer — nightly pipeline")
-    print("Status: not yet implemented (Phase 1)")
-    print("See docs/tasks.md for development roadmap.")
-    return 0
+    parser = argparse.ArgumentParser(description="UK Stock Analyzer nightly pipeline")
+    parser.add_argument("--limit", type=int, default=None, help="Process only N stocks (testing)")
+    parser.add_argument("--force", action="store_true", help="Run even on Fri/Sat (testing)")
+    args = parser.parse_args()
+
+    setup_logging()
+    summary = run_nightly_pipeline(limit=args.limit, force=args.force)
+    print("\n--- Summary ---")
+    for k, v in summary.items():
+        print(f"  {k}: {v}")
+    return 0 if summary.get("status") != "failed" else 1
 
 
 if __name__ == "__main__":

@@ -1,20 +1,20 @@
 # Nightly stock screening pipeline
-# Runs at 17:30 UK time on weekdays (after LSE close at 16:30)
-# Requires secrets: FINNHUB_API_KEY, DATABASE_URL (Supabase)
+# Runs at 05:00 UK Mon–Fri (before LSE open at 08:00)
+# Two UTC crons cover GMT/BST; Python gate ensures exactly one run at 05:00 UK
 
 name: Nightly Pipeline
 
 on:
   schedule:
-    # 17:30 UK = 16:30 UTC (BST) / 17:30 UTC (GMT winter)
-    # Adjust cron when clocks change; 16:30 UTC covers BST
-    - cron: "30 16 * * 1-5"
-  workflow_dispatch: # Allow manual trigger from GitHub UI
+    # 05:00 UK = 04:00 UTC (BST) / 05:00 UTC (GMT)
+    - cron: "0 4 * * 1-5"
+    - cron: "0 5 * * 1-5"
+  workflow_dispatch:
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 120
 
     steps:
       - name: Checkout repository
@@ -27,14 +27,27 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-core.txt
 
       - name: Run nightly pipeline
+        id: pipeline
         env:
-          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
         run: python scripts/run_nightly.py
+
+      - name: Pipeline failed
+        if: failure() && steps.pipeline.outcome == 'failure'
+        run: |
+          echo "::error::Nightly pipeline failed. Check logs and secrets."
+          exit 1
 
       - name: Upload morning report artifact
         uses: actions/upload-artifact@v4
