@@ -29,3 +29,12 @@ def test_parse_ii_csv_ii_export_with_bom():
     assert len(rows) == 1
     assert rows[0].ticker == "AAF.L"
     assert rows[0].quantity == 100.0
+
+
+def test_parse_ii_csv_many_boms_as_bytes():
+    """Matches real II export: many BOM chars before Symbol."""
+    header = ("\ufeff" * 9) + "Symbol,Name,Qty,Price,Day Gain/Loss,Average Price\n"
+    body = "PRU,Prudential,50,12.00,0.1,1200\n"
+    rows = parse_ii_csv((header + body).encode("utf-8"))
+    assert len(rows) == 1
+    assert rows[0].ticker == "PRU.L"

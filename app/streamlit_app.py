@@ -8,7 +8,7 @@ import streamlit as st
 
 from _bootstrap import bootstrap
 from config.loader import load_config
-from db.repositories import get_latest_candidate_scan, get_scan_summary
+from db.repositories import get_scan_summary
 from intelligence.ml_model import get_feature_importance, load_model_bundle
 from intelligence.usage_tracking import usage_display
 

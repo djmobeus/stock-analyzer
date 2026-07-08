@@ -8,6 +8,7 @@ from pathlib import Path
 from config.loader import ROOT_DIR
 from analysis.scoring import StockScore
 from intelligence.ml_model import predict_probability
+from visualization.charts import investing_url
 
 REPORTS_DIR = ROOT_DIR / "reports"
 
@@ -50,8 +51,10 @@ def build_morning_report(
         target_s = f"{target:.0f}p" if target else "—"
         ml = predict_probability(f)
         ml_s = f"{ml.probability:.0f}" if ml.probability is not None else "—"
+        link = investing_url(c.ticker)
         lines.append(
-            f"<tr><td>{i}</td><td>{c.ticker}</td>"
+            f"<tr><td>{i}</td>"
+            f"<td><a href='{link}' target='_blank' rel='noopener'>{c.ticker}</a></td>"
             f"<td class='score'>{c.composite_score:.1f}</td>"
             f"<td>{ml_s}</td>"
             f"<td>{dist_s}</td><td>{f.get('confluence', 0)}/3</td>"

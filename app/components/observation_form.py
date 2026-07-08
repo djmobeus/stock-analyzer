@@ -11,13 +11,26 @@ from observations.service import log_observation
 
 def render_observation_form(default_ticker: str = "", key_prefix: str = "obs") -> None:
     """Render and handle observation log form."""
+    st.markdown("##### Log your view")
+    st.caption(
+        "This is **your** call for learning — not the system’s order. "
+        "Over time, outcomes teach the ML what worked. Leave Entry at 0 to use the latest close."
+    )
     with st.form(f"{key_prefix}_form"):
         ticker = st.text_input("Ticker", value=default_ticker, placeholder="e.g. AAF.L")
         col1, col2 = st.columns(2)
         with col1:
-            prediction = st.selectbox("Prediction", ["buy", "watch", "avoid"])
+            prediction = st.selectbox(
+                "Your prediction",
+                ["buy", "watch", "avoid"],
+                help="buy = you expect ~8%+ in 8 weeks · watch = interesting but not acting · avoid = stay away",
+            )
         with col2:
-            confidence = st.selectbox("Confidence", ["low", "medium", "high"])
+            confidence = st.selectbox(
+                "Your confidence",
+                ["low", "medium", "high"],
+                help="How sure you feel about this prediction — your rating, not a calculated score.",
+            )
         entry = st.number_input(
             "Entry price (pence)",
             min_value=0.0,
@@ -26,9 +39,10 @@ def render_observation_form(default_ticker: str = "", key_prefix: str = "obs") -
             help="Leave at 0 to use the latest closing price from the database.",
         )
         desc = st.text_area(
-            "Chart description",
+            "What you see on the chart",
             placeholder="e.g. bounce off support near 200 SMA, catalyst in 3 weeks...",
             height=100,
+            help="Free text. Keywords like 'support', 'breakout', 'catalyst' are tagged for pattern stats.",
         )
         submitted = st.form_submit_button("Log observation", type="primary")
 
@@ -45,11 +59,16 @@ def render_observation_form(default_ticker: str = "", key_prefix: str = "obs") -
                 chart_description=desc,
                 entry_price_gbx=entry_price,
             )
-            st.success(f"Logged observation #{obs_id} for {ticker.strip().upper()}")
+            st.success(
+                f"Logged observation #{obs_id} for {ticker.strip().upper()}. "
+                f"Outcomes auto-record at 2, 4 and 8 weeks — no more action needed."
+            )
             if desc.strip():
                 similar = find_similar_observations(desc, get_observations_with_outcomes())
                 summary = format_similar_summary(similar)
                 if summary:
                     st.info(summary)
+                else:
+                    st.caption("No similar past descriptions yet — will improve as you log more.")
         except Exception as exc:
             st.error(str(exc))
