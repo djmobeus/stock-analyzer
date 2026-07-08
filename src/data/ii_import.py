@@ -27,14 +27,28 @@ class HoldingRow:
     avg_cost_gbx: float | None
 
 
+def _strip_bom(text: str) -> str:
+    """Remove UTF-8 BOM characters (Excel/II exports often repeat them)."""
+    return text.replace("\ufeff", "")
+
+
 def _norm_header(h: str) -> str:
-    return re.sub(r"\s+", " ", h.strip().lower())
+    return re.sub(r"\s+", " ", _strip_bom(h).strip().lower())
 
 
-def _pick_col(headers: list[str], candidates: set[str]) -> str | None:
+def _pick_col(headers: list[str], candidates: set[str], prefer: list[str] | None = None) -> str | None:
+    """Match column by normalised name; optional preference order."""
+    for pref in prefer or []:
+        for h in headers:
+            if _norm_header(h) == pref:
+                return h
     for h in headers:
-        if _norm_header(h) in candidates:
+        norm = _norm_header(h)
+        if norm in candidates:
             return h
+        for c in candidates:
+            if norm.endswith(c):
+                return h
     return None
 
 
@@ -58,13 +72,17 @@ def parse_ii_csv(content: str | bytes) -> list[HoldingRow]:
     if isinstance(content, bytes):
         text = content.decode("utf-8-sig", errors="replace")
     else:
-        text = content.lstrip("\ufeff")
+        text = content
+    text = _strip_bom(text)
 
     reader = csv.DictReader(io.StringIO(text))
     if not reader.fieldnames:
         raise ValueError("CSV has no header row")
 
-    headers = list(reader.fieldnames)
+    headers = [_strip_bom(h) for h in reader.fieldnames]
+    # Re-key rows with clean headers
+    reader.fieldnames = headers
+
     ticker_col = _pick_col(headers, _TICKER_COLS)
     qty_col = _pick_col(headers, _QTY_COLS)
     if not ticker_col or not qty_col:
@@ -73,7 +91,11 @@ def parse_ii_csv(content: str | bytes) -> list[HoldingRow]:
         )
 
     name_col = _pick_col(headers, _NAME_COLS)
-    price_col = _pick_col(headers, _PRICE_COLS)
+    price_col = _pick_col(
+        headers,
+        _PRICE_COLS,
+        prefer=["average price", "book cost", "avg price", "price"],
+    )
 
     rows: list[HoldingRow] = []
     for line in reader:

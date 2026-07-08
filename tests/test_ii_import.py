@@ -17,3 +17,15 @@ PRU,Prudential,50,1200
     assert len(rows) == 2
     assert rows[0].ticker == "AAF.L"
     assert rows[0].quantity == 100.0
+
+
+def test_parse_ii_csv_ii_export_with_bom():
+    """Interactive Investor export: Qty, multiple BOM on Symbol."""
+    csv_text = (
+        "\ufeff\ufeffSymbol,Name,Qty,Price,Average Price,Book Cost\n"
+        "AAF,Airtel Africa,100,3.50,350.5,35000\n"
+    )
+    rows = parse_ii_csv(csv_text)
+    assert len(rows) == 1
+    assert rows[0].ticker == "AAF.L"
+    assert rows[0].quantity == 100.0
