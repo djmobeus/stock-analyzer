@@ -10,6 +10,16 @@ on:
     - cron: "0 4 * * 1-5"
     - cron: "0 5 * * 1-5"
   workflow_dispatch:
+    inputs:
+      limit:
+        description: "Max stocks to process (empty = full universe)"
+        required: false
+        type: string
+      force:
+        description: "Run even outside Mon-Fri 05:00 window"
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   run-pipeline:
@@ -27,7 +37,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements-core.txt
+        run: pip install -r requirements.txt
 
       - name: Run nightly pipeline
         id: pipeline
@@ -41,7 +51,11 @@ jobs:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
-        run: python scripts/run_nightly.py
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.limit }}" ]; then ARGS="$ARGS --limit ${{ inputs.limit }}"; fi
+          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          python scripts/run_nightly.py $ARGS
 
       - name: Pipeline failed
         if: failure() && steps.pipeline.outcome == 'failure'

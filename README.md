@@ -30,7 +30,7 @@ Nightly screening system for FTSE 100 and FTSE 250 stocks — technical analysis
 cd "c:\Users\PMouzakis\Dropbox\Stock Analyzer"
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements-core.txt
+pip install -r requirements.txt
 copy .env.example .env
 # Edit .env — add DATABASE_URL (optional Finnhub key)
 python scripts/init_db.py

@@ -82,10 +82,11 @@ The dashboard reads candidates, observations, and holdings from Supabase — sam
 
 ### 5. Verify GitHub Actions
 
-1. Repo → **Actions** → **Nightly Pipeline**
-2. **Run workflow** (manual test) — or wait until 05:00 UK Mon–Fri
-3. Check run logs for `email_status: sent`
-4. Download **morning-report** artifact if email fails
+1. Repo → **Actions** → **Nightly Pipeline** → **Run workflow**
+2. For first test: set **limit** = `20`, **force** = true (~10–15 min)
+3. For production: leave **limit** empty, **force** = false (scheduled 05:00 UK only)
+4. Check logs for `email_status: sent`
+5. Download **morning-report** artifact if needed
 
 ### 6. Gmail setup (for morning email)
 

@@ -1,47 +1,19 @@
-# UK Stock Analyzer — core dependencies
-# Install: python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt
+# Cloud + dashboard dependencies (Streamlit Community Cloud, GitHub Actions)
+# Heavy optional ML deps: requirements-ml.txt
 
-# Data
 pandas>=2.2.0
 numpy>=1.26.0
 yfinance>=0.2.40
-
-# Technical analysis
-pandas-ta>=0.3.14b
-
-# Fundamentals and news
-feedparser>=6.0.11
-requests>=2.31.0
-
-# Sentiment (local, free)
-vaderSentiment>=3.3.2
-transformers>=4.40.0
-torch>=2.2.0
-
-# Pattern matching
-sentence-transformers>=2.7.0
-
-# Machine learning
-scikit-learn>=1.4.0
-imbalanced-learn>=0.12.0
-
-# Database (cloud option)
-psycopg2-binary>=2.9.9
-
-# Dashboard
-streamlit>=1.35.0
-plotly>=5.22.0
-
-# Reports
-jinja2>=3.1.4
-
-# Config and utilities
+lxml>=5.2.0
 python-dotenv>=1.0.1
 pyyaml>=6.0.1
-
-# Optional LLM upgrade
+requests>=2.31.0
+feedparser>=6.0.11
+vaderSentiment>=3.3.2
+psycopg2-binary>=2.9.9
+streamlit>=1.35.0
+plotly>=5.22.0
+scikit-learn>=1.4.0
+joblib>=1.4.0
 anthropic>=0.28.0
-
-# Development
-pytest>=8.2.0
-pytest-cov>=5.0.0
+jinja2>=3.1.4
