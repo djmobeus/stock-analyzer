@@ -32,13 +32,16 @@ def log_anthropic_usage(
 ) -> float:
     """Persist usage row; return estimated USD cost."""
     cost = estimate_anthropic_cost_usd(input_tokens, output_tokens, model)
-    record_api_usage(
-        provider="anthropic",
-        model=model,
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        estimated_cost_usd=cost,
-    )
+    try:
+        record_api_usage(
+            provider="anthropic",
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            estimated_cost_usd=cost,
+        )
+    except Exception as exc:
+        logger.warning("Could not record API usage (run init_db.py): %s", exc)
     logger.info(
         "Anthropic usage: in=%d out=%d est=$%.4f",
         input_tokens,

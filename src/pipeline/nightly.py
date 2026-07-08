@@ -82,7 +82,7 @@ def run_nightly_pipeline(limit: int | None = None, force: bool = False) -> dict:
     load_env()
 
     if not force:
-        ok, gate_reason = should_run_scheduled_job(force=False)
+        ok, gate_reason = should_run_scheduled_job(force=force)
         if not ok:
             logger.info("Pipeline skipped: %s", gate_reason)
             return {"status": "skipped", "reason": gate_reason}

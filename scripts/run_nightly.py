@@ -28,6 +28,8 @@ def main() -> int:
     print("\n--- Summary ---")
     for k, v in summary.items():
         print(f"  {k}: {v}")
+    if summary.get("status") == "skipped":
+        return 0
     return 0 if summary.get("status") != "failed" else 1
 
 

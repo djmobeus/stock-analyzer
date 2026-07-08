@@ -44,24 +44,21 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          GITHUB_ACTIONS: "true"
         run: |
-          ARGS=""
-          if [ -n "${{ inputs.limit }}" ]; then ARGS="$ARGS --limit ${{ inputs.limit }}"; fi
-          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          ARGS="--force"
+          if [ -n "${{ github.event.inputs.limit }}" ]; then ARGS="$ARGS --limit ${{ github.event.inputs.limit }}"; fi
+          echo "Running: python scripts/run_nightly.py $ARGS"
           python scripts/run_nightly.py $ARGS
 
       - name: Pipeline failed
         if: failure() && steps.pipeline.outcome == 'failure'
-        run: |
-          echo "::error::Nightly pipeline failed. Check logs and secrets."
-          exit 1
+        run: echo "::error::Nightly pipeline failed — expand 'Run nightly pipeline' above for the Python traceback."
 
       - name: Upload morning report artifact
         uses: actions/upload-artifact@v4

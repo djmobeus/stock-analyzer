@@ -14,12 +14,14 @@ logger = logging.getLogger(__name__)
 
 def get_email_config() -> dict:
     """Load email settings from environment."""
+    port_raw = (os.getenv("SMTP_PORT") or "587").strip() or "587"
+    host_raw = (os.getenv("SMTP_HOST") or "smtp.gmail.com").strip() or "smtp.gmail.com"
     return {
-        "smtp_host": os.getenv("SMTP_HOST", "smtp.gmail.com").strip(),
-        "smtp_port": int(os.getenv("SMTP_PORT", "587")),
+        "smtp_host": host_raw,
+        "smtp_port": int(port_raw),
         "smtp_user": os.getenv("SMTP_USER", "").strip(),
         "smtp_password": os.getenv("SMTP_PASSWORD", "").strip(),
-        "email_from": os.getenv("EMAIL_FROM", os.getenv("SMTP_USER", "")).strip(),
+        "email_from": (os.getenv("EMAIL_FROM") or os.getenv("SMTP_USER", "")).strip(),
         "email_to": os.getenv("EMAIL_TO", "").strip(),
     }
 
