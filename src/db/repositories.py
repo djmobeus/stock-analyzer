@@ -814,3 +814,81 @@ def get_holdings(source: str = "ii_csv") -> list[dict]:
         }
         for r in rows
     ]
+
+
+def record_api_usage(
+    provider: str,
+    model: str | None,
+    input_tokens: int,
+    output_tokens: int,
+    estimated_cost_usd: float,
+) -> None:
+    ph = get_placeholder()
+    now = datetime.now(timezone.utc).isoformat()
+    with get_connection() as conn:
+        conn.cursor().execute(
+            f"""
+            INSERT INTO api_usage
+                (provider, model, input_tokens, output_tokens, estimated_cost_usd, recorded_at)
+            VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+            """,
+            (provider, model, input_tokens, output_tokens, estimated_cost_usd, now),
+        )
+
+
+def get_api_usage_summary(provider: str = "anthropic") -> dict:
+    """Month-to-date and lifetime estimated spend (USD)."""
+    from zoneinfo import ZoneInfo
+
+    uk = ZoneInfo("Europe/London")
+    now = datetime.now(uk)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_start_iso = month_start.isoformat()
+    empty = {
+        "month_usd": 0.0,
+        "month_calls": 0,
+        "month_input_tokens": 0,
+        "month_output_tokens": 0,
+        "lifetime_usd": 0.0,
+        "lifetime_calls": 0,
+        "lifetime_input_tokens": 0,
+        "lifetime_output_tokens": 0,
+        "month_label": now.strftime("%B %Y"),
+    }
+
+    ph = get_placeholder()
+    try:
+        with get_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                SELECT COALESCE(SUM(estimated_cost_usd), 0), COALESCE(SUM(input_tokens), 0),
+                       COALESCE(SUM(output_tokens), 0), COUNT(*)
+                FROM api_usage WHERE provider = {ph} AND recorded_at >= {ph}
+                """,
+                (provider, month_start_iso),
+            )
+            month_row = cur.fetchone()
+            cur.execute(
+                f"""
+                SELECT COALESCE(SUM(estimated_cost_usd), 0), COALESCE(SUM(input_tokens), 0),
+                       COALESCE(SUM(output_tokens), 0), COUNT(*)
+                FROM api_usage WHERE provider = {ph}
+                """,
+                (provider,),
+            )
+            life_row = cur.fetchone()
+    except Exception:
+        return empty
+
+    return {
+        "month_usd": round(float(month_row[0]), 4),
+        "month_calls": int(month_row[3]),
+        "month_input_tokens": int(month_row[1]),
+        "month_output_tokens": int(month_row[2]),
+        "lifetime_usd": round(float(life_row[0]), 4),
+        "lifetime_calls": int(life_row[3]),
+        "lifetime_input_tokens": int(life_row[1]),
+        "lifetime_output_tokens": int(life_row[2]),
+        "month_label": now.strftime("%B %Y"),
+    }

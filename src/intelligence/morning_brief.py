@@ -57,6 +57,15 @@ def generate_morning_prose(candidates: list[StockScore], briefing_for: str) -> s
             ],
         )
         text = message.content[0].text if message.content else ""
+        usage = getattr(message, "usage", None)
+        if usage:
+            from intelligence.usage_tracking import log_anthropic_usage
+
+            log_anthropic_usage(
+                input_tokens=int(getattr(usage, "input_tokens", 0) or 0),
+                output_tokens=int(getattr(usage, "output_tokens", 0) or 0),
+                model="claude-3-5-haiku-20241022",
+            )
         return text.strip() or _template_summary(candidates, briefing_for)
     except Exception as exc:
         logger.warning("Anthropic summary failed (%s); using template", exc)

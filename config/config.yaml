@@ -44,6 +44,12 @@ email:
   enabled: true
   # Set EMAIL_TO in .env / GitHub secrets (e.g. you@p-mouzakis.com)
 
+# Anthropic API cost estimates (USD per million tokens — update if pricing changes)
+anthropic:
+  model: claude-3-5-haiku-20241022
+  input_usd_per_mtok: 0.80
+  output_usd_per_mtok: 4.00
+
 # RSS feeds for UK market news
 news:
   feeds:

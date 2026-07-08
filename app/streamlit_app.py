@@ -10,6 +10,7 @@ from _bootstrap import bootstrap
 from config.loader import load_config
 from db.repositories import get_latest_candidate_scan, get_scan_summary
 from intelligence.ml_model import get_feature_importance, load_model_bundle
+from intelligence.usage_tracking import usage_display
 
 bootstrap()
 
@@ -46,6 +47,21 @@ else:
     need = ml_cfg.get("min_samples_logistic", 100)
     have = summary.get("outcome_8w_count", 0)
     st.info(f"ML predictions unlock at {need} labelled outcomes ({have}/{need} so far).")
+
+st.subheader("Anthropic API usage (estimate)")
+usage = usage_display()
+uc1, uc2, uc3 = st.columns(3)
+with uc1:
+    st.metric(f"{usage['month_label']}", f"${usage['month_usd']:.4f}", help=f"≈ £{usage['month_gbp']:.2f}")
+with uc2:
+    st.metric("Lifetime", f"${usage['lifetime_usd']:.4f}", help=f"≈ £{usage['lifetime_gbp']:.2f}")
+with uc3:
+    st.metric("Calls this month", usage["month_calls"])
+st.caption(
+    "Estimated from token counts per call. Official billing: "
+    "[Anthropic Console → Usage](https://console.anthropic.com/settings/usage). "
+    "Set a monthly spend cap under Console → Settings → Limits."
+)
 
 st.markdown("""
 ### Navigate

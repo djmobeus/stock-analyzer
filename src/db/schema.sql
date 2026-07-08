@@ -159,6 +159,17 @@ CREATE TABLE IF NOT EXISTS holdings (
     UNIQUE (ticker, source)
 );
 
+CREATE TABLE IF NOT EXISTS api_usage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider TEXT NOT NULL,
+    model TEXT,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    estimated_cost_usd REAL,
+    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_usage_recorded ON api_usage(recorded_at);
 CREATE INDEX IF NOT EXISTS idx_daily_prices_ticker ON daily_prices(ticker);
 CREATE INDEX IF NOT EXISTS idx_daily_prices_date ON daily_prices(date);
 CREATE INDEX IF NOT EXISTS idx_data_quality_ticker ON data_quality_flags(ticker);
