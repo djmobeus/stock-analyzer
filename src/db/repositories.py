@@ -362,14 +362,21 @@ def get_latest_candidate_scan() -> date | None:
     return date.fromisoformat(str(val)) if not isinstance(val, date) else val
 
 
+def _ticker_price_aliases(ticker: str) -> list[str]:
+    """Yahoo / DB ticker variants (BT-A.L vs BT.A.L)."""
+    variants = [ticker]
+    if ticker.endswith(".L"):
+        base = ticker[:-2]
+        if "." in base and "-" not in base:
+            variants.append(base.replace(".", "-") + ".L")
+        elif "-" in base:
+            variants.append(base.replace("-", ".") + ".L")
+    return list(dict.fromkeys(variants))
+
+
 def get_latest_price_gbx(ticker: str) -> float | None:
     ph = get_placeholder()
-    tickers = [ticker]
-    if ticker.endswith(".L") and "." in ticker[:-2]:
-        # BT-A.L vs BT.A.L style aliases
-        base = ticker[:-2]
-        if "-" not in base and "." in base:
-            tickers.append(base.replace(".", "-") + ".L")
+    tickers = _ticker_price_aliases(ticker)
 
     with get_connection() as conn:
         cur = conn.cursor()
@@ -381,6 +388,22 @@ def get_latest_price_gbx(ticker: str) -> float | None:
             row = cur.fetchone()
             if row:
                 return float(row[0])
+
+    try:
+        import yfinance as yf
+
+        for t in tickers:
+            hist = yf.Ticker(t).history(period="5d")
+            if hist.empty:
+                continue
+            close = float(hist["Close"].iloc[-1])
+            info = yf.Ticker(t).info or {}
+            currency = info.get("currency", "GBp")
+            if currency in ("GBP", "GBp", "GBX") and currency == "GBP":
+                close *= 100
+            return close
+    except Exception:
+        pass
     return None
 
 
