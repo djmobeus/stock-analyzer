@@ -9,6 +9,8 @@ def test_normalise_epic():
     assert normalise_epic("AAF") == "AAF.L"
     assert normalise_epic("PRU.L") == "PRU.L"
     assert normalise_epic("BT.A") == "BT-A.L"
+    assert normalise_epic("JD.") == "JD.L"
+    assert normalise_epic("TW.") == "TW.L"
 
 
 def test_parse_ii_csv_basic():
@@ -70,3 +72,19 @@ def test_parse_ii_activity_csv_nets_buys_and_sells():
     assert by_ticker["BT-A.L"].quantity == 7802
     assert by_ticker["IMB.L"].quantity == 165
     assert by_ticker["IMB.L"].avg_cost_gbx is None
+
+
+def test_parse_ii_holdings_export_with_pence_prices():
+    csv_text = """Symbol,Name,Qty,Price,Average Price,Book Cost
+BAB,Babcock,370,"1,008.00p","1,080.4486p","£3,997.66"
+JD.,JD Sports,100,82.70p,101.3161p,£101.32
+TW.,Taylor Wimpey,3501,77.98p,103.1868p,"£3,612.57"
+,,Totals,,,
+"""
+    rows = parse_ii_csv(csv_text)
+    assert len(rows) == 3
+    by = {r.ticker: r for r in rows}
+    assert by["BAB.L"].avg_cost_gbx == 1080.4486
+    assert by["JD.L"].quantity == 100
+    assert by["TW.L"].quantity == 3501
+    assert by["TW.L"].avg_cost_gbx == 103.1868

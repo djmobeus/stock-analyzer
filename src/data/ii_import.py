@@ -72,6 +72,9 @@ def normalise_epic(epic: str) -> str:
         return e
     if e in _YAHOO_EPIC_ALIASES:
         return _YAHOO_EPIC_ALIASES[e]
+    # II uses trailing dots on some epics (JD., TW.)
+    if e.endswith(".") and not e.endswith(".L"):
+        e = e[:-1]
     if e.endswith(".L"):
         return e
     return f"{e}.L"
@@ -90,9 +93,20 @@ def _parse_money(value: str | None) -> float | None:
 
 
 def _parse_price_gbx(value: str | None) -> float | None:
-    """Parse II price column (£ per share) into pence."""
-    pounds = _parse_money(value)
-    if pounds is None:
+    """Parse II price column into pence (supports 1080.45p or £19.78 formats)."""
+    if not value:
+        return None
+    text = _clean_cell(str(value)).replace(",", "").replace("£", "").strip()
+    if not text or text.lower() in {"n/a", "-"}:
+        return None
+    if text.lower().endswith("p"):
+        try:
+            return float(text[:-1])
+        except ValueError:
+            return None
+    try:
+        pounds = float(text)
+    except ValueError:
         return None
     return pounds * 100 if pounds < 500 else pounds
 
@@ -141,13 +155,14 @@ def _parse_holdings_export(reader: csv.DictReader, clean_headers: list[str]) -> 
     price_col = _pick_col(
         clean_headers,
         _PRICE_COLS,
-        prefer=["average price", "book cost", "avg price", "price"],
+        prefer=["average price", "avg price", "average price", "price"],
     )
+    book_cost_col = _pick_col(clean_headers, {"book cost"})
 
     rows: list[HoldingRow] = []
     for line in reader:
-        raw_ticker = (line.get(ticker_col) or "").strip()
-        if not raw_ticker or raw_ticker.lower() in {"symbol", "total", "n/a"}:
+        raw_ticker = _clean_cell(line.get(ticker_col) or "")
+        if not raw_ticker or raw_ticker.lower() in {"symbol", "total", "totals", "n/a", "gbp"}:
             continue
         try:
             qty = float(str(line.get(qty_col, "0")).replace(",", ""))
@@ -159,6 +174,10 @@ def _parse_holdings_export(reader: csv.DictReader, clean_headers: list[str]) -> 
         avg_cost = None
         if price_col and line.get(price_col):
             avg_cost = _parse_price_gbx(str(line[price_col]))
+        if avg_cost is None and book_cost_col and line.get(book_cost_col):
+            book_gbp = _parse_money(str(line.get(book_cost_col)))
+            if book_gbp and qty > 0:
+                avg_cost = round(book_gbp * 100 / qty, 2)
 
         rows.append(
             HoldingRow(
