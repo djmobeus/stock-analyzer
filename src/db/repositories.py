@@ -364,14 +364,24 @@ def get_latest_candidate_scan() -> date | None:
 
 def get_latest_price_gbx(ticker: str) -> float | None:
     ph = get_placeholder()
+    tickers = [ticker]
+    if ticker.endswith(".L") and "." in ticker[:-2]:
+        # BT-A.L vs BT.A.L style aliases
+        base = ticker[:-2]
+        if "-" not in base and "." in base:
+            tickers.append(base.replace(".", "-") + ".L")
+
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute(
-            f"SELECT close_gbx FROM daily_prices WHERE ticker = {ph} ORDER BY date DESC LIMIT 1",
-            (ticker,),
-        )
-        row = cur.fetchone()
-    return float(row[0]) if row else None
+        for t in tickers:
+            cur.execute(
+                f"SELECT close_gbx FROM daily_prices WHERE ticker = {ph} ORDER BY date DESC LIMIT 1",
+                (t,),
+            )
+            row = cur.fetchone()
+            if row:
+                return float(row[0])
+    return None
 
 
 def get_price_on_or_before(ticker: str, on_date: date) -> float | None:

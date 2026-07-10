@@ -23,9 +23,28 @@ if uploaded:
     try:
         content = uploaded.getvalue()
         rows = parse_ii_csv(content)
+        st.caption(
+            f"Found **{len(rows)}** open position(s) after netting buys/sells. "
+            "Activity exports are supported — sold positions are excluded."
+        )
+        if rows:
+            st.dataframe(
+                [
+                    {
+                        "Ticker": r.ticker,
+                        "Name": r.name,
+                        "Qty": r.quantity,
+                        "Avg cost (p)": r.avg_cost_gbx,
+                    }
+                    for r in rows
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
         if st.button("Import holdings", type="primary"):
             n = upsert_holdings(rows)
-            st.success(f"Imported {n} holdings.")
+            st.success(f"Saved {n} holdings.")
+            st.rerun()
     except Exception as exc:
         st.error(str(exc))
 

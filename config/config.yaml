@@ -61,9 +61,9 @@ email:
 
 # Anthropic API cost estimates (USD per million tokens — update if pricing changes)
 anthropic:
-  model: claude-3-5-haiku-20241022
-  input_usd_per_mtok: 0.80
-  output_usd_per_mtok: 4.00
+  model: claude-haiku-4-5-20251001
+  input_usd_per_mtok: 1.00
+  output_usd_per_mtok: 5.00
 
 # RSS feeds for UK market news
 news:

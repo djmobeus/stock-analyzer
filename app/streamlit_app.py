@@ -56,11 +56,18 @@ with uc2:
     st.metric("Lifetime", f"${usage['lifetime_usd']:.4f}", help=f"≈ £{usage['lifetime_gbp']:.2f}")
 with uc3:
     st.metric("Calls this month", usage["month_calls"])
-st.caption(
-    "Estimated from token counts per call. Official billing: "
-    "[Anthropic Console → Usage](https://console.anthropic.com/settings/usage). "
-    "Set a monthly spend cap under Console → Settings → Limits."
-)
+if usage["lifetime_calls"] == 0:
+    st.info(
+        "**$0 usually means the free template was used**, not Claude. "
+        "The AI summary only runs when `ANTHROPIC_API_KEY` is set in **GitHub Actions secrets** "
+        "(not only in your local `.env`). After a run with the key set, you should see 1 call per morning here."
+    )
+else:
+    st.caption(
+        "Estimated from token counts per call. Official billing: "
+        "[Anthropic Console → Usage](https://console.anthropic.com/settings/usage). "
+        "Set a monthly spend cap under Console → Settings → Limits."
+    )
 
 st.markdown("""
 ### Navigate

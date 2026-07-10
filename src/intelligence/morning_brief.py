@@ -6,6 +6,7 @@ import logging
 import os
 
 from analysis.scoring import StockScore
+from config.loader import load_config
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +31,18 @@ def _template_summary(candidates: list[StockScore], briefing_for: str) -> str:
     return "\n".join(lines)
 
 
-def generate_morning_prose(candidates: list[StockScore], briefing_for: str) -> str:
-    """Haiku summary when ANTHROPIC_API_KEY is set; otherwise template text."""
+def generate_morning_prose(candidates: list[StockScore], briefing_for: str) -> tuple[str, str]:
+    """
+    Haiku summary when ANTHROPIC_API_KEY is set; otherwise template text.
+
+    Returns (prose, source) where source is ``anthropic`` or ``template``.
+    """
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
-        return _template_summary(candidates, briefing_for)
+        logger.info("Morning summary: template (no ANTHROPIC_API_KEY)")
+        return _template_summary(candidates, briefing_for), "template"
+
+    model = load_config().get("anthropic", {}).get("model", "claude-haiku-4-5-20251001")
 
     try:
         import anthropic
@@ -42,7 +50,7 @@ def generate_morning_prose(candidates: list[StockScore], briefing_for: str) -> s
         client = anthropic.Anthropic(api_key=api_key)
         facts = _template_summary(candidates, briefing_for)
         message = client.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model=model,
             max_tokens=500,
             messages=[
                 {
@@ -64,9 +72,13 @@ def generate_morning_prose(candidates: list[StockScore], briefing_for: str) -> s
             log_anthropic_usage(
                 input_tokens=int(getattr(usage, "input_tokens", 0) or 0),
                 output_tokens=int(getattr(usage, "output_tokens", 0) or 0),
-                model="claude-3-5-haiku-20241022",
+                model=model,
             )
-        return text.strip() or _template_summary(candidates, briefing_for)
+        if text.strip():
+            logger.info("Morning summary: anthropic (%s)", model)
+            return text.strip(), "anthropic"
+        logger.warning("Morning summary: empty Anthropic response; using template")
+        return _template_summary(candidates, briefing_for), "template"
     except Exception as exc:
-        logger.warning("Anthropic summary failed (%s); using template", exc)
-        return _template_summary(candidates, briefing_for)
+        logger.error("Anthropic summary failed (%s); using template", exc)
+        return _template_summary(candidates, briefing_for), "template"

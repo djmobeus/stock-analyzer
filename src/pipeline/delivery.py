@@ -22,7 +22,7 @@ def deliver_morning_briefing(
 ) -> dict:
     """Generate prose summary and send email digest."""
     report_path = Path(report_path)
-    prose = generate_morning_prose(shortlist, briefing_for)
+    prose, summary_source = generate_morning_prose(shortlist, briefing_for)
 
     # Append prose to HTML report
     if report_path.exists():
@@ -42,4 +42,8 @@ def deliver_morning_briefing(
     )
     email_result = send_morning_email(subject, plain, html_report_path=report_path)
     logger.info("Delivery: %s", email_result)
-    return {"morning_prose": prose[:200] + "...", **email_result}
+    return {
+        "morning_prose": prose[:200] + "...",
+        "summary_source": summary_source,
+        **email_result,
+    }
