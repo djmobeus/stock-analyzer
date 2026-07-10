@@ -11,7 +11,7 @@
 1. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
 2. **New app** → select `djmobeus/stock-analyzer`, branch `main`.
 3. Main file path: `app/streamlit_app.py`
-4. Advanced settings → Python version **3.11**
+4. Advanced settings → Python version **3.11** (required — 3.14 can crash with scipy/yfinance)
 5. Secrets (TOML format):
 
 ```toml

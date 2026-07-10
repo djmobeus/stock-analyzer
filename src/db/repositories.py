@@ -375,12 +375,11 @@ def _ticker_price_aliases(ticker: str) -> list[str]:
 
 
 def get_latest_price_gbx(ticker: str) -> float | None:
+    """Latest close from nightly pipeline DB (no live yfinance — safe for Streamlit Cloud)."""
     ph = get_placeholder()
-    tickers = _ticker_price_aliases(ticker)
-
-    with get_connection() as conn:
-        cur = conn.cursor()
-        for t in tickers:
+    for t in _ticker_price_aliases(ticker):
+        with get_connection() as conn:
+            cur = conn.cursor()
             cur.execute(
                 f"SELECT close_gbx FROM daily_prices WHERE ticker = {ph} ORDER BY date DESC LIMIT 1",
                 (t,),
@@ -388,22 +387,6 @@ def get_latest_price_gbx(ticker: str) -> float | None:
             row = cur.fetchone()
             if row:
                 return float(row[0])
-
-    try:
-        import yfinance as yf
-
-        for t in tickers:
-            hist = yf.Ticker(t).history(period="5d")
-            if hist.empty:
-                continue
-            close = float(hist["Close"].iloc[-1])
-            info = yf.Ticker(t).info or {}
-            currency = info.get("currency", "GBp")
-            if currency in ("GBP", "GBp", "GBX") and currency == "GBP":
-                close *= 100
-            return close
-    except Exception:
-        pass
     return None
 
 

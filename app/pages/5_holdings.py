@@ -74,5 +74,5 @@ for h in holdings:
 st.dataframe(table, use_container_width=True, hide_index=True)
 st.caption(
     f"Last import: {holdings[0].get('imported_at', '—')}. "
-    "IMB shows no avg cost when the CSV only has a dividend line (no buy in the export window)."
+    "Latest prices come from the nightly scan database; tickers not in the scan may show blank."
 )
