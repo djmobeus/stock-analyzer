@@ -14,12 +14,6 @@ from intelligence.usage_tracking import usage_display
 
 bootstrap()
 
-st.set_page_config(
-    page_title="UK Stock Analyzer",
-    page_icon="📈",
-    layout="wide",
-)
-
 st.title("UK Stock Analyzer")
 st.caption("Analytical screening for FTSE 100/250 — not financial advice.")
 
@@ -47,6 +41,11 @@ else:
     need = ml_cfg.get("min_samples_logistic", 100)
     have = summary.get("outcome_8w_count", 0)
     st.info(f"ML predictions unlock at {need} labelled outcomes ({have}/{need} so far).")
+
+with st.expander("Morning email AI summary (Anthropic) — plain English guide"):
+    from components.metrics_help import ANTHROPIC_GUIDE
+
+    st.markdown(ANTHROPIC_GUIDE)
 
 st.subheader("Anthropic API usage (estimate)")
 usage = usage_display()

@@ -11,6 +11,10 @@ This guide makes the UK Stock Analyzer fully independent of your computer.
 | Dashboard (phone/laptop browser) | Streamlit Community Cloud | No |
 | Morning email | Gmail SMTP from GitHub Actions | No |
 
+**Live dashboard URL:** [https://stock-analyzer-djmobeus.streamlit.app/](https://stock-analyzer-djmobeus.streamlit.app/)
+
+> **Streamlit “asleep” does not stop emails.** The morning email is sent by **GitHub Actions** at 05:00 UK — completely separate from the Streamlit website. If the dashboard asks you to “relaunch”, click it (free tier sleeps after inactivity); that only affects viewing the site, not the nightly scan or email.
+
 ---
 
 ## Checklist
@@ -74,9 +78,10 @@ git push
 
 ```toml
 DATABASE_URL = "postgresql://..."
+APP_PASSWORD = "your-chosen-password"
 ```
 
-5. Deploy. Bookmark the URL on your phone.
+5. Deploy. Bookmark the URL: [https://stock-analyzer-djmobeus.streamlit.app/](https://stock-analyzer-djmobeus.streamlit.app/)
 
 The dashboard reads candidates, observations, and holdings from Supabase — same data as the nightly pipeline.
 
@@ -140,8 +145,11 @@ Local development remains useful for testing (`--force --limit 5`) but is not re
 
 | Issue | Fix |
 |-------|-----|
-| Email not sent | Check SMTP secrets; verify App Password |
+| **No emails for weeks** | Check **Actions → Nightly Pipeline** — scheduled runs may be **disabled** after repo inactivity (re-enable under Actions). Manually **Run workflow** with limit `20` to test. |
+| Email not sent | Check SMTP secrets; verify App Password; search spam folder |
+| Dashboard asleep | Click **Relaunch** on Streamlit — normal on free tier; does **not** affect email |
 | Dashboard empty | Confirm Streamlit `DATABASE_URL` matches GitHub |
 | Pipeline skipped `outside_run_window` | Normal for one of the two UTC crons; other should run |
 | Pipeline skipped `already_completed_today` | Expected if manual re-run same day |
 | Holdings table error | Run `python scripts/init_db.py` against Supabase |
+| Can't open dashboard | Set `APP_PASSWORD` in Streamlit secrets (see deploy step 4) |

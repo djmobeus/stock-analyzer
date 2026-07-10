@@ -15,6 +15,22 @@ from config.loader import load_env  # noqa: E402
 from db.connection import init_database  # noqa: E402
 
 
+def _ensure_page_config() -> None:
+    import streamlit as st
+
+    if st.session_state.get("_page_config_done"):
+        return
+    try:
+        st.set_page_config(
+            page_title="UK Stock Analyzer",
+            page_icon="📈",
+            layout="wide",
+        )
+    except Exception:
+        pass
+    st.session_state["_page_config_done"] = True
+
+
 def _load_streamlit_secrets() -> None:
     """Copy Streamlit Cloud secrets into environment variables."""
     try:
@@ -44,13 +60,13 @@ def require_login() -> None:
 
     password = os.getenv("APP_PASSWORD", "").strip()
     if not password:
-        return  # no password configured — open access
+        return
 
     if st.session_state.get("authenticated"):
         return
 
     st.title("UK Stock Analyzer")
-    st.caption("Private access")
+    st.caption("Enter your private app password")
     entered = st.text_input("Password", type="password")
     if st.button("Sign in", type="primary"):
         if entered == password:
@@ -62,6 +78,7 @@ def require_login() -> None:
 
 
 def bootstrap() -> None:
+    _ensure_page_config()
     load_env()
     _load_streamlit_secrets()
     require_login()

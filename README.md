@@ -2,6 +2,8 @@
 
 Nightly screening system for FTSE 100 and FTSE 250 stocks — technical analysis, fundamentals, news sentiment, and machine learning to surface high-probability trade candidates each morning.
 
+**Live dashboard:** [https://stock-analyzer-djmobeus.streamlit.app/](https://stock-analyzer-djmobeus.streamlit.app/)
+
 **Not financial advice.** Analytical tool for personal use only.
 
 ## Documentation

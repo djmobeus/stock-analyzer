@@ -20,7 +20,7 @@ def _template_summary(candidates: list[StockScore], briefing_for: str) -> str:
         dist_s = f"{dist:.1f}%" if dist is not None else "n/a"
         target = f.get("analyst_target")
         target_s = f"{target:.0f}p" if target else "n/a"
-        flags = " [MTF conflict]" if c.conflict_flag else ""
+        flags = " [Timeframe conflict]" if c.conflict_flag else ""
         lines.append(
             f"{i}. {c.ticker} (score {c.composite_score:.0f}) — "
             f"{dist_s} from support, confluence {f.get('confluence', 0)}/3, "
