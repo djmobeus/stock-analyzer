@@ -78,8 +78,20 @@ def require_login() -> None:
 
 
 def bootstrap() -> None:
+    import streamlit as st
+
     _ensure_page_config()
     load_env()
     _load_streamlit_secrets()
     require_login()
-    init_database()
+    if st.session_state.get("_schema_ready"):
+        return
+    try:
+        init_database()
+        st.session_state["_schema_ready"] = True
+    except Exception as exc:
+        st.error(
+            "Could not connect to the database. Check `DATABASE_URL` in Streamlit secrets "
+            f"and that Supabase is reachable. ({exc})"
+        )
+        st.stop()

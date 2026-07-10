@@ -40,7 +40,7 @@ def get_connection() -> Generator[Any, None, None]:
     if url and _is_postgres(url):
         import psycopg2
 
-        conn = psycopg2.connect(url)
+        conn = psycopg2.connect(url, connect_timeout=15)
         try:
             yield conn
             conn.commit()
