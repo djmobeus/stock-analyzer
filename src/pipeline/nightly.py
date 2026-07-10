@@ -11,12 +11,13 @@ from analysis.indicators import compute_all_timeframes, indicators_to_rows
 from config.loader import load_config, load_env
 from data.prices import fetch_ohlcv
 from data.quality import check_price_quality
-from data.universe import build_filtered_universe, universe_as_of
+from data.tiered_universe import build_tiered_universe
+from data.universe import universe_as_of
 from db.connection import init_database
 from pipeline.calendar import next_briefing_day
 from pipeline.delivery import deliver_morning_briefing
 from pipeline.schedule_gate import should_run_scheduled_job
-from pipeline.fundamentals_news import apply_phase2_filters, ingest_news_and_catalysts
+from pipeline.fundamentals_news import ingest_news_and_catalysts
 from pipeline.outcomes import update_observation_outcomes
 from pipeline.scoring_step import score_universe
 from intelligence.ml_model import train_model
@@ -103,16 +104,21 @@ def run_nightly_pipeline(limit: int | None = None, force: bool = False) -> dict:
     ticker_data: list[tuple[str, object]] = []
 
     try:
-        logger.info("Building filtered universe (filters 1–3)...")
-        universe = build_filtered_universe(metrics_limit=limit)
-        logger.info("After liquidity filters: %d stocks", len(universe))
+        logger.info("Building tiered universe (filters 1–6)...")
+        tiered = build_tiered_universe(metrics_limit=limit)
+        scorable = tiered.scorable
+        scorable_tickers = {r.ticker for r in scorable}
+        price_targets = tiered.price_targets
+        logger.info(
+            "Universe: %d scorable, %d price targets (%d skipped today)",
+            len(scorable),
+            len(price_targets),
+            tiered.stats.get("tickers_skipped", 0),
+        )
 
-        logger.info("Applying fundamental filters (4–6) via yfinance...")
-        universe = apply_phase2_filters(universe)
-        upsert_stocks(universe, universe_as_of())
-        logger.info("Final universe size: %d stocks", len(universe))
+        upsert_stocks(scorable, universe_as_of())
 
-        news_summary = ingest_news_and_catalysts(universe)
+        news_summary = ingest_news_and_catalysts(scorable)
 
         outcome_summary = update_observation_outcomes()
         logger.info("Outcome tracking: %s", outcome_summary)
@@ -125,7 +131,7 @@ def run_nightly_pipeline(limit: int | None = None, force: bool = False) -> dict:
             logger.info("ML training: %s", ml_summary)
 
         workers = int(config.get("pipeline", {}).get("max_workers", 8))
-        universe_size = len(universe)
+        universe_size = len(price_targets)
 
         def _run_ticker(stock: object) -> tuple[str, bool, int, int, object | None, str | None]:
             ticker = stock.ticker
@@ -136,7 +142,7 @@ def run_nightly_pipeline(limit: int | None = None, force: bool = False) -> dict:
                 return ticker, False, 0, 0, None, str(exc)
 
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = [pool.submit(_run_ticker, stock) for stock in universe]
+            futures = [pool.submit(_run_ticker, stock) for stock in price_targets]
             for i, future in enumerate(as_completed(futures), 1):
                 ticker, ok, prices, indicators, df, err = future.result()
                 logger.info("[%d/%d] Finished %s", i, universe_size, ticker)
@@ -154,21 +160,22 @@ def run_nightly_pipeline(limit: int | None = None, force: bool = False) -> dict:
                     processed += 1
                     total_prices += prices
                     total_indicators += indicators
-                    ticker_data.append((ticker, df))
+                    if ticker in scorable_tickers:
+                        ticker_data.append((ticker, df))
                 else:
                     quarantined += 1
 
         scoring_summary = score_universe(
             ticker_data,
             briefing_for=briefing,
-            universe_size=len(universe),
+            universe_size=len(scorable),
         )
 
         delivery_summary = deliver_morning_briefing(
             shortlist=scoring_summary.get("shortlist_scores", []),
             briefing_for=briefing,
             report_path=scoring_summary["report_path"],
-            universe_size=len(universe),
+            universe_size=len(scorable),
         )
         scoring_log = {k: v for k, v in scoring_summary.items() if k != "shortlist_scores"}
 
@@ -176,11 +183,12 @@ def run_nightly_pipeline(limit: int | None = None, force: bool = False) -> dict:
         summary = {
             "status": "success",
             "briefing_for": briefing,
-            "universe_size": len(universe),
+            "universe_size": len(scorable),
             "processed": processed,
             "quarantined": quarantined,
             "price_rows": total_prices,
             "indicator_rows": total_indicators,
+            **tiered.stats,
             **news_summary,
             **outcome_summary,
             **ml_summary,

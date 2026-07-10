@@ -112,6 +112,22 @@ If you use Google Workspace for `p-mouzakis.com`, SMTP may be `smtp.gmail.com` w
 | GitHub cron | `0 4` and `0 5 UTC` (covers BST/GMT) |
 | Python gate | Only one run per day at 05:00 UK |
 
+### Tiered universe (faster daily runs)
+
+After the first full bootstrap scan, stocks are stored in `universe_tiers`:
+
+| Tier | Meaning | Re-checked |
+|------|---------|------------|
+| **active** | Passes all filters | Every weekday run |
+| **watch** | Near miss (e.g. low volume, 2–3 analysts) | Every **7 days** |
+| **cold** | Far from filters (REIT, tiny cap, no analysts) | Every **30 days** |
+
+Also checked daily: your **II holdings** and the latest **shadow top 15** candidates.
+
+This cuts daily yfinance calls from ~350 to roughly **80–120 active** names (plus any due watch/cold refreshes).
+
+Run `python scripts/init_db.py` once on Supabase after pulling this update (adds `universe_tiers` table).
+
 You receive:
 - Email to `EMAIL_TO` with prose summary + HTML report
 - Dashboard updated in Supabase

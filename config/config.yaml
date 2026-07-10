@@ -43,6 +43,17 @@ ml:
 pipeline:
   max_workers: 8
 
+# Tiered universe refresh (active=daily, watch=weekly, cold=monthly)
+universe_tiers:
+  enabled: true
+  shadow_priority_count: 15
+  cold_volume_ratio: 0.50
+  cold_cap_ratio: 0.50
+  watch_volume_ratio: 0.70
+  watch_cap_ratio: 0.70
+  watch_recheck_days: 7
+  cold_recheck_days: 30
+
 # Email morning digest (Gmail SMTP)
 email:
   enabled: true

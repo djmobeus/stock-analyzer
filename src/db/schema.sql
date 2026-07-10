@@ -159,6 +159,17 @@ CREATE TABLE IF NOT EXISTS holdings (
     UNIQUE (ticker, source)
 );
 
+CREATE TABLE IF NOT EXISTS universe_tiers (
+    ticker TEXT PRIMARY KEY,
+    tier TEXT NOT NULL,
+    filter_reason TEXT,
+    last_checked DATE,
+    next_check_after DATE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_universe_tiers_tier ON universe_tiers(tier);
+
 CREATE TABLE IF NOT EXISTS api_usage (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     provider TEXT NOT NULL,

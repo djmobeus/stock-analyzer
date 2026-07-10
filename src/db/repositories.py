@@ -816,6 +816,71 @@ def get_holdings(source: str = "ii_csv") -> list[dict]:
     ]
 
 
+def get_holdings_tickers(source: str = "ii_csv") -> list[str]:
+    return [h["ticker"] for h in get_holdings(source)]
+
+
+def get_recent_shadow_tickers(limit: int = 15) -> list[str]:
+    """Top shadow-logged candidates from the latest scan."""
+    scan_date = get_latest_candidate_scan()
+    if not scan_date:
+        return []
+    rows = get_candidates_for_scan(scan_date, limit=limit)
+    return [r["ticker"] for r in rows]
+
+
+def count_universe_tiers() -> int:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM universe_tiers")
+        row = cur.fetchone()
+    return int(row[0]) if row else 0
+
+
+def get_universe_tiers_map() -> dict[str, dict]:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT ticker, tier, filter_reason, last_checked, next_check_after
+            FROM universe_tiers
+            """
+        )
+        rows = cur.fetchall()
+    return {
+        r[0]: {
+            "tier": r[1],
+            "filter_reason": r[2],
+            "last_checked": r[3],
+            "next_check_after": r[4],
+        }
+        for r in rows
+    }
+
+
+def upsert_universe_tiers(rows: list[tuple]) -> int:
+    """Rows: (ticker, tier, filter_reason, last_checked, next_check_after)."""
+    if not rows:
+        return 0
+    ph = get_placeholder()
+    now = datetime.now(timezone.utc).isoformat()
+    sql = f"""
+        INSERT INTO universe_tiers
+            (ticker, tier, filter_reason, last_checked, next_check_after, updated_at)
+        VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+        ON CONFLICT (ticker) DO UPDATE SET
+            tier = excluded.tier,
+            filter_reason = excluded.filter_reason,
+            last_checked = excluded.last_checked,
+            next_check_after = excluded.next_check_after,
+            updated_at = excluded.updated_at
+    """
+    tuples = [(*row, now) for row in rows]
+    with get_connection() as conn:
+        _execute_many(conn, sql, tuples)
+    return len(tuples)
+
+
 def record_api_usage(
     provider: str,
     model: str | None,

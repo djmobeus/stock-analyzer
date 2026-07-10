@@ -218,6 +218,23 @@ def snapshot_from_db(ticker: str) -> AnalystSnapshot | None:
     )
 
 
+def gather_analyst_snapshots(
+    records: list[StockRecord],
+    cache_days: int = 7,
+) -> dict[str, AnalystSnapshot | None]:
+    """Fetch or load cached analyst snapshots without filtering."""
+    snaps: dict[str, AnalystSnapshot | None] = {}
+    for rec in records:
+        if analyst_data_is_fresh(rec.ticker, cache_days):
+            snaps[rec.ticker] = snapshot_from_db(rec.ticker)
+            continue
+        snap = fetch_analyst_snapshot(rec.ticker)
+        if snap:
+            upsert_analyst_snapshot(snap)
+        snaps[rec.ticker] = snap
+    return snaps
+
+
 def enrich_and_filter_universe(
     records: list[StockRecord],
     min_analysts: int = 4,
