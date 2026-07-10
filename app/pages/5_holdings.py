@@ -11,9 +11,33 @@ import streamlit as st
 
 from _bootstrap import bootstrap
 from data.ii_import import parse_ii_csv
-from db.repositories import get_holdings, get_latest_price_gbx, upsert_holdings
+from db.repositories import _ticker_price_aliases, get_holdings, get_latest_price_gbx, upsert_holdings
 
 bootstrap()
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _live_price_gbx(ticker: str) -> float | None:
+    """One-off Yahoo fetch for holdings missing from the nightly DB (cached 1 hour)."""
+    try:
+        import yfinance as yf
+
+        for t in _ticker_price_aliases(ticker):
+            hist = yf.Ticker(t).history(period="5d")
+            if hist.empty:
+                continue
+            close = float(hist["Close"].iloc[-1])
+            currency = (yf.Ticker(t).info or {}).get("currency", "GBp")
+            if currency == "GBP":
+                close *= 100
+            return close
+    except Exception:
+        return None
+    return None
+
+
+def _holding_price_gbx(ticker: str) -> float | None:
+    return get_latest_price_gbx(ticker) or _live_price_gbx(ticker)
 
 st.header("Holdings")
 st.caption(
@@ -52,7 +76,7 @@ if not holdings:
 st.subheader("Your holdings")
 table = []
 for h in holdings:
-    latest = get_latest_price_gbx(h["ticker"])
+    latest = _holding_price_gbx(h["ticker"])
     cost = h.get("avg_cost_gbx")
     qty = float(h.get("quantity") or 0)
     value = latest * qty if latest else None
@@ -74,5 +98,5 @@ for h in holdings:
 st.dataframe(table, use_container_width=True, hide_index=True)
 st.caption(
     f"Last import: {holdings[0].get('imported_at', '—')}. "
-    "Latest prices come from the nightly scan database; tickers not in the scan may show blank."
+    "Latest prices use the nightly scan database, with a live Yahoo fallback if missing."
 )
