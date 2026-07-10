@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from io import StringIO
@@ -176,13 +177,28 @@ def build_filtered_universe(metrics_limit: int | None = None) -> list[StockRecor
         listed = listed[:metrics_limit]
 
     records: list[StockRecord] = []
-    for i, ticker in enumerate(listed, 1):
-        logger.info("Metrics %d/%d: %s", i, len(listed), ticker)
+    workers = int(load_config().get("pipeline", {}).get("max_workers", 8))
+
+    def _metrics(ticker: str) -> StockRecord:
         try:
-            records.append(fetch_stock_metrics(ticker))
+            return fetch_stock_metrics(ticker)
         except Exception as exc:
             logger.warning("Failed metrics for %s: %s", ticker, exc)
-            records.append(StockRecord(ticker=ticker))
+            return StockRecord(ticker=ticker)
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(_metrics, t): t for t in listed}
+        done = 0
+        for future in as_completed(futures):
+            done += 1
+            ticker = futures[future]
+            if done % 25 == 0 or done == len(listed):
+                logger.info("Metrics progress: %d/%d", done, len(listed))
+            records.append(future.result())
+
+    # Preserve original FTSE order for stable logs
+    order = {t: i for i, t in enumerate(listed)}
+    records.sort(key=lambda r: order.get(r.ticker, 9999))
 
     filtered = apply_volume_and_cap_filters(records, min_vol, min_cap)
     logger.info("Universe: %d raw -> %d after filters", len(listed), len(filtered))

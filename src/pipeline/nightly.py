@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 
 from analysis.indicators import compute_all_timeframes, indicators_to_rows
@@ -123,28 +124,39 @@ def run_nightly_pipeline(limit: int | None = None, force: bool = False) -> dict:
             ml_summary = train_model()
             logger.info("ML training: %s", ml_summary)
 
-        for i, stock in enumerate(universe, 1):
+        workers = int(config.get("pipeline", {}).get("max_workers", 8))
+        universe_size = len(universe)
+
+        def _run_ticker(stock: object) -> tuple[str, bool, int, int, object | None, str | None]:
             ticker = stock.ticker
-            logger.info("[%d/%d] Processing %s", i, len(universe), ticker)
             try:
                 ok, prices, indicators, df = process_ticker(ticker, dq_config)
-                if ok and df is not None:
+                return ticker, ok, prices, indicators, df, None
+            except Exception as exc:
+                return ticker, False, 0, 0, None, str(exc)
+
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(_run_ticker, stock) for stock in universe]
+            for i, future in enumerate(as_completed(futures), 1):
+                ticker, ok, prices, indicators, df, err = future.result()
+                logger.info("[%d/%d] Finished %s", i, universe_size, ticker)
+                if err:
+                    quarantined += 1
+                    logger.error("%s failed: %s", ticker, err)
+                    save_quality_flag(
+                        ticker=ticker,
+                        flag_date=date.today(),
+                        flag_type="pipeline_error",
+                        details=err,
+                        quarantined=True,
+                    )
+                elif ok and df is not None:
                     processed += 1
                     total_prices += prices
                     total_indicators += indicators
                     ticker_data.append((ticker, df))
                 else:
                     quarantined += 1
-            except Exception as exc:
-                quarantined += 1
-                logger.error("%s failed: %s", ticker, exc)
-                save_quality_flag(
-                    ticker=ticker,
-                    flag_date=date.today(),
-                    flag_type="pipeline_error",
-                    details=str(exc),
-                    quarantined=True,
-                )
 
         scoring_summary = score_universe(
             ticker_data,

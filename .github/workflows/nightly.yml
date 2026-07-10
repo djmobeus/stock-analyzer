@@ -21,10 +21,15 @@ on:
         type: boolean
         default: true
 
+# Prevent overlapping full-universe runs (e.g. both UTC crons when first is still running)
+concurrency:
+  group: nightly-pipeline
+  cancel-in-progress: false
+
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 360
 
     steps:
       - name: Checkout repository
@@ -51,8 +56,15 @@ jobs:
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           GITHUB_ACTIONS: "true"
         run: |
-          ARGS="--force"
-          if [ -n "${{ github.event.inputs.limit }}" ]; then ARGS="$ARGS --limit ${{ github.event.inputs.limit }}"; fi
+          ARGS=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ github.event.inputs.force }}" = "true" ]; then
+              ARGS="--force"
+            fi
+            if [ -n "${{ github.event.inputs.limit }}" ]; then
+              ARGS="$ARGS --limit ${{ github.event.inputs.limit }}"
+            fi
+          fi
           echo "Running: python scripts/run_nightly.py $ARGS"
           python scripts/run_nightly.py $ARGS
 

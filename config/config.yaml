@@ -39,6 +39,10 @@ ml:
   min_samples_forest: 300
   retrain_min_new_outcomes: 5
 
+# Nightly pipeline performance (yfinance is I/O-bound)
+pipeline:
+  max_workers: 8
+
 # Email morning digest (Gmail SMTP)
 email:
   enabled: true

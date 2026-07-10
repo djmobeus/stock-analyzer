@@ -145,7 +145,9 @@ Local development remains useful for testing (`--force --limit 5`) but is not re
 
 | Issue | Fix |
 |-------|-----|
-| **No emails for weeks** | Check **Actions → Nightly Pipeline** — scheduled runs may be **disabled** after repo inactivity (re-enable under Actions). Manually **Run workflow** with limit `20` to test. |
+| **No emails for weeks** | Check **Actions → Nightly Pipeline** — runs may **time out at 2h** or overlap. Cancel stuck runs; push latest workflow fix; manual **Run workflow** to test. |
+| **Two runs in progress** | Was caused by `--force` on every scheduled run (fixed). Cancel stuck runs in Actions. |
+| **Job exceeded 2h** | Full universe is slow; latest code uses parallel fetch + 6h timeout. |
 | Email not sent | Check SMTP secrets; verify App Password; search spam folder |
 | Dashboard asleep | Click **Relaunch** on Streamlit — normal on free tier; does **not** affect email |
 | Dashboard empty | Confirm Streamlit `DATABASE_URL` matches GitHub |
