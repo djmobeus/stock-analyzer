@@ -36,3 +36,12 @@ def test_skip_saturday_and_sunday():
 def test_run_time_window_at_5am():
     assert is_run_time_window(_uk(2026, 7, 6, 5, 10)) is True
     assert is_run_time_window(_uk(2026, 7, 6, 12, 0)) is False
+
+
+def test_morning_delivery_window_until_7am():
+    from pipeline.calendar import is_morning_delivery_window
+
+    assert is_morning_delivery_window(_uk(2026, 7, 6, 5, 0)) is True
+    assert is_morning_delivery_window(_uk(2026, 7, 6, 6, 45)) is True
+    assert is_morning_delivery_window(_uk(2026, 7, 6, 7, 0)) is True
+    assert is_morning_delivery_window(_uk(2026, 7, 6, 7, 30)) is False

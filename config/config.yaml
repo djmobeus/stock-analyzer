@@ -1,10 +1,11 @@
 # UK pipeline schedule (Europe/London)
-# Run: Mon–Fri 05:00 UK → morning briefing before LSE open (08:00)
-# Captures overnight RNS/news after previous session close
+# Preferred start 05:00 UK Mon–Fri — overnight news in, email aimed by 07:00
+# GitHub cron can start late; gate still runs (does not skip for lateness)
 schedule:
   run_weekdays: [monday, tuesday, wednesday, thursday, friday]
   skip_weekdays: [saturday, sunday]
   run_time_uk: "05:00"
+  results_by_hour_uk: 7
 
 scoring:
   support_proximity: 0.25

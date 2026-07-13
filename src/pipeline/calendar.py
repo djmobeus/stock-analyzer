@@ -1,13 +1,13 @@
 """
 UK market schedule for the morning pipeline.
 
-Runs at 05:00 UK on trading mornings (Mon–Fri) so overnight news
-is included before the LSE open (08:00).
+Preferred start: 05:00 UK Mon–Fri (overnight news in, results aimed before 07:00).
+GitHub Actions cron is often delayed; the schedule gate still runs late weekday
+jobs instead of skipping them.
 
 Schedule (UK time):
-  - RUN Monday 05:00    → Monday briefing (Friday's close + weekend news)
-  - RUN Tue–Fri 05:00   → That day's briefing (previous session close)
-  - SKIP Saturday/Sunday mornings (no LSE session)
+  - RUN Mon–Fri mornings → that day's briefing
+  - SKIP Saturday/Sunday
 """
 
 from __future__ import annotations
@@ -51,6 +51,12 @@ def configured_run_hour_minute() -> tuple[int, int]:
     return hour, minute
 
 
+def results_by_hour_uk() -> int:
+    """Preferred latest hour (UK) for email delivery — default 7."""
+    config = load_config()
+    return int(config.get("schedule", {}).get("results_by_hour_uk", 7))
+
+
 def should_run_pipeline(when: datetime | None = None) -> bool:
     """True on Mon–Fri UK mornings (pipeline run days)."""
     when = _uk_now(when)
@@ -58,7 +64,7 @@ def should_run_pipeline(when: datetime | None = None) -> bool:
 
 
 def is_run_time_window(when: datetime | None = None, tolerance_minutes: int = 45) -> bool:
-    """True if within tolerance of configured UK run time (for GitHub cron gating)."""
+    """True if within tolerance of configured UK run time (legacy helper)."""
     when = _uk_now(when)
     hour, minute = configured_run_hour_minute()
     target = when.replace(hour=hour, minute=minute, second=0, microsecond=0)
@@ -66,17 +72,33 @@ def is_run_time_window(when: datetime | None = None, tolerance_minutes: int = 45
     return delta_min <= tolerance_minutes
 
 
+def is_morning_delivery_window(when: datetime | None = None) -> bool:
+    """
+    True if we are still in the preferred morning delivery window.
+
+    From preferred run time through ``results_by_hour_uk`` (default 07:00).
+    Used for logging only — late weekday runs still proceed.
+    """
+    when = _uk_now(when)
+    hour, minute = configured_run_hour_minute()
+    start = when.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    end = when.replace(hour=results_by_hour_uk(), minute=0, second=0, microsecond=0)
+    return start <= when <= end
+
+
 def skip_reason(when: datetime | None = None) -> str:
     """Human-readable reason when should_run_pipeline is False."""
     when = _uk_now(when)
     day = _DAY_NAMES[when.weekday()]
+    hour, minute = configured_run_hour_minute()
     return (
         f"LSE closed — no pipeline on {day} morning. "
-        f"Next run: Monday–Friday at 05:00 UK."
+        f"Next run: Monday–Friday around {hour:02d}:{minute:02d} UK "
+        f"(results aimed by {results_by_hour_uk():02d}:00)."
     )
 
 
 def next_briefing_day(when: datetime | None = None) -> str:
-    """Trading morning this run prepares data for (same calendar day at 05:00)."""
+    """Trading morning this run prepares data for (same calendar day)."""
     when = _uk_now(when)
     return _DAY_NAMES[when.weekday()]

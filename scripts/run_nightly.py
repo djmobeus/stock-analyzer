@@ -28,7 +28,9 @@ def main() -> int:
     print("\n--- Summary ---")
     for k, v in summary.items():
         print(f"  {k}: {v}")
+    # Make skips obvious in GitHub Actions UI (search for SKIPPED)
     if summary.get("status") == "skipped":
+        print(f"\nSKIPPED: {summary.get('reason', 'unknown')}")
         return 0
     return 0 if summary.get("status") != "failed" else 1
 

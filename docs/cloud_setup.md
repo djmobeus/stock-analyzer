@@ -6,14 +6,14 @@ This guide makes the UK Stock Analyzer fully independent of your computer.
 
 | Component | Service | Your PC needed? |
 |-----------|---------|-----------------|
-| Nightly scan (05:00 UK Mon–Fri) | GitHub Actions | No |
+| Nightly scan (~05:00 UK Mon–Fri, email aimed by 07:00) | GitHub Actions | No |
 | Database | Supabase PostgreSQL | No |
 | Dashboard (phone/laptop browser) | Streamlit Community Cloud | No |
 | Morning email | Gmail SMTP from GitHub Actions | No |
 
 **Live dashboard URL:** [https://stock-analyzer-djmobeus.streamlit.app/](https://stock-analyzer-djmobeus.streamlit.app/)
 
-> **Streamlit “asleep” does not stop emails.** The morning email is sent by **GitHub Actions** at 05:00 UK — completely separate from the Streamlit website. If the dashboard asks you to “relaunch”, click it (free tier sleeps after inactivity); that only affects viewing the site, not the nightly scan or email.
+> **Streamlit “asleep” does not stop emails.** The morning email is sent by **GitHub Actions** around **05:00 UK** (aimed in your inbox by **07:00**) — completely separate from the Streamlit website. If the dashboard asks you to “relaunch”, click it (free tier sleeps after inactivity); that only affects viewing the site, not the nightly scan or email.
 
 ---
 
@@ -108,9 +108,12 @@ If you use Google Workspace for `p-mouzakis.com`, SMTP may be `smtp.gmail.com` w
 
 | Setting | Value |
 |---------|-------|
-| Run time | **05:00 UK** Mon–Fri |
-| GitHub cron | `0 4` and `0 5 UTC` (covers BST/GMT) |
-| Python gate | Only one run per day at 05:00 UK |
+| Preferred start | **05:00 UK** Mon–Fri |
+| Results by | Aimed before **07:00 UK** |
+| GitHub cron | Early buffer + `04:00`/`05:00` UTC (covers BST/GMT + delays) |
+| Python gate | One successful run per weekday; **does not skip** if cron starts late |
+
+Why 05:00 (not later): most overnight RNS/news is already out by early morning. Starting ~05:00 gives the best chance of finishing before 07:00 even when GitHub starts the job late. A later start would catch a little more pre-open news but would often miss your 07:00 deadline.
 
 ### Tiered universe (faster daily runs)
 
@@ -167,7 +170,8 @@ Local development remains useful for testing (`--force --limit 5`) but is not re
 | Email not sent | Check SMTP secrets; verify App Password; search spam folder |
 | Dashboard asleep | Click **Relaunch** on Streamlit — normal on free tier; does **not** affect email |
 | Dashboard empty | Confirm Streamlit `DATABASE_URL` matches GitHub |
-| Pipeline skipped `outside_run_window` | Normal for one of the two UTC crons; other should run |
+| Pipeline log shows `SKIPPED` / `already_completed_today` | Normal for the 2nd/3rd cron the same day — only one full scan runs |
+| Short green run (~1 min), no email | Open the log and search for `SKIPPED` or `status: skipped`. Push latest schedule-gate fix if still on old `outside_run_window` behaviour. |
 | Pipeline skipped `already_completed_today` | Expected if manual re-run same day |
 | Holdings table error | Run `python scripts/init_db.py` against Supabase |
 | Can't open dashboard | Set `APP_PASSWORD` in Streamlit secrets (see deploy step 4) |

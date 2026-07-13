@@ -1,11 +1,14 @@
 # Nightly stock screening pipeline
-# Runs at 05:00 UK Mon–Fri (before LSE open at 08:00)
-# Two UTC crons cover GMT/BST; Python gate ensures exactly one run at 05:00 UK
+# Preferred: ~05:00 UK Mon–Fri → email aimed before 07:00 (overnight news included)
+# Extra early cron helps beat GitHub Actions schedule delays
+# Python gate: once per weekday; does not skip when cron starts late
 
 name: Nightly Pipeline
 
 on:
   schedule:
+    # Early buffer (BST: 04:30 UK / GMT: 03:30 UK) — catches overnight news, starts sooner
+    - cron: "30 3 * * 1-5"
     # 05:00 UK = 04:00 UTC (BST) / 05:00 UTC (GMT)
     - cron: "0 4 * * 1-5"
     - cron: "0 5 * * 1-5"
