@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}{{ name }} — UK Stock Analyzer{% endblock %}
+{% block head %}
+<script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+{% endblock %}
+{% block content %}
+<p class="muted"><a href="/shortlist">← Shortlist</a> · <a href="/lookup">Lookup</a></p>
+<h1>{{ name }}</h1>
+<p class="muted">{{ ticker }}{% if score is not none %} · score {{ "%.1f"|format(score) }}{% endif %}
+  · <a href="{{ links.primary }}" target="_blank" rel="noopener">{{ links.primary_label }}</a>
+  {% if links.investing and links.yahoo %}| <a href="{{ links.yahoo }}" target="_blank" rel="noopener">Yahoo</a>{% endif %}
+</p>
+
+<div class="card">
+  <h2 style="margin-top:0">Why shortlisted</h2>
+  {% if why.bullets %}
+  <ul class="bullets">
+    {% for b in why.bullets %}<li>{{ b }}</li>{% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No why-chosen snapshot for this ticker on the latest scan (open a shortlisted name, or wait for tonight’s run). You can still chart and write notes below.</p>
+  {% endif %}
+</div>
+
+{% if breakdown %}
+<div class="card">
+  <h2 style="margin-top:0">Score breakdown</h2>
+  <table>
+    <thead>
+      <tr><th>Factor</th><th>Weight</th><th>Score /100</th><th>Contribution</th></tr>
+    </thead>
+    <tbody>
+    {% for row in breakdown %}
+      <tr>
+        <td>{{ row.label }}</td>
+        <td>{{ row.weight_pct }}%</td>
+        <td>{% if row.score is not none %}{{ "%.1f"|format(row.score) }}{% else %}—{% endif %}</td>
+        <td>{% if row.contribution is not none %}{{ "%.1f"|format(row.contribution) }}{% else %}—{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2 style="margin-top:0">Chart (Yahoo / yfinance, GBX)</h2>
+  <p class="muted">May differ from Investing.com. Drag to pan, scroll to zoom.</p>
+  <div class="tf-toggle">
+    {% for t in timeframes %}
+      <a class="btn {% if t != timeframe %}secondary{% endif %}" href="/stock/{{ ticker }}?tf={{ t }}">{{ t }}</a>
+    {% endfor %}
+  </div>
+  <div id="chart"></div>
+  <div id="chart-vol"></div>
+</div>
+
+<div class="card" id="notes">
+  <h2 style="margin-top:0">Your analysis → coach critique</h2>
+  <p class="muted">Write what you think. Feedback is blunt on purpose — not financial advice.</p>
+  <form method="post" action="/stock/{{ ticker }}/analyse">
+    <label for="agree">Do you agree with the system rationale?</label>
+    <select id="agree" name="agree">
+      <option value="">Not sure</option>
+      <option value="agree">Mostly agree</option>
+      <option value="disagree">Disagree</option>
+      <option value="mixed">Mixed</option>
+    </select>
+    <label for="notes">Your notes (chart + thesis)</label>
+    <textarea id="notes" name="notes" required placeholder="What I see on the chart… why I would / would not act…"></textarea>
+    <p style="margin-top:1rem"><button class="btn" type="submit">Save &amp; get honest critique</button></p>
+  </form>
+</div>
+
+{% if notes %}
+<div class="card">
+  <h2 style="margin-top:0">Recent notes</h2>
+  {% for n in notes %}
+  <div style="margin-bottom:1.25rem;border-bottom:1px solid var(--line);padding-bottom:1rem">
+    <p class="muted">{{ n.created_at }} · agree: {{ n.agree_with_system or "—" }}</p>
+    <p><strong>You:</strong> {{ n.user_notes }}</p>
+    {% if n.critique_text %}
+    <p><strong>Coach:</strong></p>
+    <div class="critique">{{ n.critique_text }}</div>
+    {% else %}
+    <p class="muted">Critique pending.</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+const candles = {{ candles_json | safe }};
+const volumes = {{ volumes_json | safe }};
+const el = document.getElementById('chart');
+const elVol = document.getElementById('chart-vol');
+if (el && candles.length && window.LightweightCharts) {
+  const chart = LightweightCharts.createChart(el, {
+    layout: { background: { color: '#fffdf8' }, textColor: '#1a1f1c' },
+    grid: { vertLines: { color: '#eee8dc' }, horzLines: { color: '#eee8dc' } },
+    rightPriceScale: { borderVisible: false },
+    timeScale: { borderVisible: false },
+  });
+  const series = chart.addCandlestickSeries({
+    upColor: '#0f6b4c', downColor: '#9a3412',
+    borderVisible: false, wickUpColor: '#0f6b4c', wickDownColor: '#9a3412',
+  });
+  series.setData(candles.map(c => ({
+    time: c.time, open: c.open, high: c.high, low: c.low, close: c.close
+  })));
+  chart.timeScale().fitContent();
+  new ResizeObserver(() => chart.applyOptions({ width: el.clientWidth })).observe(el);
+
+  if (elVol && volumes.length) {
+    const volChart = LightweightCharts.createChart(elVol, {
+      layout: { background: { color: '#fffdf8' }, textColor: '#1a1f1c' },
+      grid: { vertLines: { color: '#eee8dc' }, horzLines: { color: '#eee8dc' } },
+      rightPriceScale: { borderVisible: false },
+      timeScale: { borderVisible: false, visible: false },
+    });
+    const volSeries = volChart.addHistogramSeries({
+      color: '#9ab0a4',
+      priceFormat: { type: 'volume' },
+    });
+    volSeries.setData(volumes.map(v => ({ time: v.time, value: v.value })));
+    volChart.timeScale().fitContent();
+    chart.timeScale().subscribeVisibleLogicalRangeChange(range => {
+      if (range) volChart.timeScale().setVisibleLogicalRange(range);
+    });
+    new ResizeObserver(() => volChart.applyOptions({ width: elVol.clientWidth })).observe(elVol);
+  }
+} else if (el) {
+  el.innerHTML = '<p class="muted">No price bars in the database for this ticker yet.</p>';
+}
+</script>
+{% endblock %}

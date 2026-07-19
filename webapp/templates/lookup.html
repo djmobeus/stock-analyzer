@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Lookup — UK Stock Analyzer{% endblock %}
+{% block content %}
+<h1>Ticker lookup</h1>
+<p class="muted">Open any LSE ticker for chart, links, and coaching — even if it’s not on today’s shortlist.</p>
+
+<form class="card" method="get" action="/lookup">
+  <label for="ticker">Ticker</label>
+  <input id="ticker" name="ticker" type="text" placeholder="e.g. PRU or PRU.L" required autofocus>
+  <p style="margin-top:1rem"><button class="btn" type="submit">Open stock</button></p>
+</form>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Holdings — UK Stock Analyzer{% endblock %}
+{% block content %}
+<h1>Holdings</h1>
+<p class="muted">Upload an Interactive Investor <strong>holdings</strong> CSV (Symbol, Qty, Average Price). Activity files also work (buys/sells netted).</p>
+
+{% if message %}<p class="flash">{{ message }}</p>{% endif %}
+
+<form class="card" method="post" action="/holdings/import" enctype="multipart/form-data">
+  <label for="file">II CSV export</label>
+  <input id="file" name="file" type="file" accept=".csv" required>
+  <p style="margin-top:1rem"><button class="btn" type="submit">Import holdings</button></p>
+</form>
+
+{% if preview %}
+<p class="muted">Imported tickers: {% for t, n, q in preview %}{{ t }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+{% endif %}
+
+<h2>Your holdings</h2>
+{% if table %}
+<table>
+  <thead>
+    <tr><th>Ticker</th><th>Name</th><th>Qty</th><th>Avg cost (p)</th><th>Latest (p)</th><th>P&L %</th><th>Value (p)</th></tr>
+  </thead>
+  <tbody>
+  {% for h in table %}
+    <tr>
+      <td><a href="/stock/{{ h.ticker }}">{{ h.ticker }}</a></td>
+      <td>{{ h.name or "—" }}</td>
+      <td>{{ h.quantity }}</td>
+      <td>{% if h.avg_cost_gbx is not none %}{{ "%.1f"|format(h.avg_cost_gbx) }}{% else %}—{% endif %}</td>
+      <td>{% if h.latest is not none %}{{ "%.1f"|format(h.latest) }}{% else %}<span class="muted">Awaiting scan</span>{% endif %}</td>
+      <td>{% if h.pnl is not none %}{{ "%.1f"|format(h.pnl) }}{% else %}—{% endif %}</td>
+      <td>{% if h.value is not none %}{{ "%.0f"|format(h.value) }}{% else %}—{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="muted">Latest prices from the nightly scan database. Blank = not fetched yet for that ticker.</p>
+{% else %}
+<p class="muted">No holdings imported yet.</p>
+{% endif %}
+{% endblock %}

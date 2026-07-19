@@ -35,13 +35,13 @@ The system learns from every prediction and outcome over time, improving screeni
 
 ## Core goals
 
-1. **Scan nightly** — Filter and analyse ~120–150 tradeable UK stocks after LSE close
-2. **Multi-timeframe technical analysis** — Daily, weekly, monthly indicators via pandas-ta
+1. **Scan nightly** — Filter and analyse tradeable UK stocks; email aimed **before 07:00 UK**
+2. **Multi-timeframe technical analysis** — Daily, weekly, monthly
 3. **Fundamental + catalyst layer** — Analyst consensus, upside %, upcoming dated events
-4. **Morning shortlist** — Surface 5–10 high-conviction candidates ranked by composite score
-5. **Learn over time** — Log observations, track 2/4/8-week outcomes, improve via pattern stats and ML
-6. **Natural language input** — User chart descriptions stored and matched to historical outcomes
-7. **Clean dashboard** — Technical picture, fundamentals, catalysts, pattern match stats per candidate
+4. **Morning shortlist** — 5–10 candidates with **company name**, score, and **why chosen**
+5. **Learn over time** — Shadow log, 2/4/8-week outcomes, ML after enough labels
+6. **Coaching loop** — User writes analysis → honest AI critique (correct / wrong / risks)
+7. **Fast cloud UI** — FastAPI + HTMX (not Streamlit); TradingView charts
 
 ---
 
@@ -97,27 +97,33 @@ Reduce ~350 FTSE constituents to ~120–150 before analysis:
 - Feature importance display
 - Embedding-based pattern matching (sentence-transformers)
 
-### Phase 6 — Dashboard and automation
-- Streamlit dashboard (4 views: morning scan, portfolio, patterns, lookup)
-- Static HTML morning report
-- GitHub Actions nightly pipeline (runs when PC is off)
-- Streamlit Community Cloud hosting for dashboard
+### Phase 6 — Dashboard and automation (v1, legacy)
+- Streamlit prototype (superseded in rebuild v2)
+
+### Rebuild v2 — Product surface
+- FastAPI + HTMX web app (Render/Railway)
+- Why-chosen explanations + coaching critique
+- TradingView Lightweight Charts
+- Reliable single weekday cron + email by ~07:00 UK
 
 ---
 
-## Dashboard views
+## Dashboard views (v2)
 
-### 1. Morning scan
-Top 5–10 candidates with: ticker, sector, price, distance from support, analyst target and upside %, nearest catalyst, confluence score, ML probability (when sufficient data), historical pattern match.
+### 1. Shortlist
+Name, ticker, score, support distance, timeframes, conflict, ML prob; link to detail with why-chosen.
 
-### 2. Portfolio tracker
-Open observations, current P&L vs prediction, stocks approaching target or stop, rolling pattern stats.
+### 2. Stock detail
+Chart, why shortlisted, score breakdown, your analysis, coach critique, external research links.
 
-### 3. Pattern performance
-Hit rate by pattern type, ML feature importance, best/worst historical setups.
+### 3. Holdings
+II CSV import, P&L vs cost (Yahoo/scan prices).
 
-### 4. Stock lookup
-Any LSE ticker — full technical, fundamental, and news picture; option to log observation.
+### 4. Notes / coaching
+Saved analyses and critiques.
+
+### 5. ML status
+Outcomes N/100, model meta, shadow hit rates, feature importance in plain English.
 
 ---
 
@@ -162,19 +168,20 @@ Any LSE ticker — full technical, fundamental, and news picture; option to log 
 | Data accuracy | Finnhub validation, GBX normalisation, quarantine — non-negotiable |
 | Technical analysis | pandas-ta, pandas — industry standard, free |
 | ML | scikit-learn locally — free |
-| Hosting | GitHub Actions + Streamlit Community Cloud — free |
-| LLM | Local FinBERT/VADER + templates default; ~£3–5/mo Anthropic Haiku optional for morning summaries |
+| Hosting | GitHub Actions + Render/Railway + Supabase — free/cheap |
+| LLM | Haiku for morning prose + coaching critique; usage tracked |
 
 ---
 
-## Success criteria
+## Success criteria (v2)
 
-- [ ] Nightly pipeline completes in <30 minutes for full universe
-- [ ] <2% price data errors on validated ticker set
-- [ ] 5–10 ranked candidates each trading morning
-- [ ] User can log observation in <60 seconds
-- [ ] Outcomes auto-tracked at 2/4/8 weeks without manual input
-- [ ] Dashboard accessible from phone browser when hosted on Streamlit Cloud
+- [ ] Weekday email most days before 07:00 UK
+- [ ] One full pipeline per weekday
+- [ ] FastAPI app usable on phone; chart zoom works
+- [ ] Shortlist shows name + why chosen + catalysts
+- [ ] External link opens correct instrument ≥90% for shortlist
+- [ ] Coaching critique stored beside user analysis
+- [ ] ML status clear on one screen
 - [ ] System runs when local PC is off (GitHub Actions)
 
 ---

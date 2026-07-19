@@ -246,11 +246,12 @@ def predict_probability(features: dict) -> MLResult:
 
     bundle = load_model_bundle()
     if bundle is None:
-        rows = _load_training_rows()
+        # Do NOT query training rows here — that was reopening Supabase on every
+        # shortlist row (~2–3s each). Sample count lives on the ML / home pages.
         return MLResult(
             probability=None,
             model_version=None,
-            sample_count=len(rows),
+            sample_count=0,
             reason="insufficient_data",
         )
 
@@ -265,21 +266,12 @@ def predict_probability(features: dict) -> MLResult:
     vec = np.array([_features_vector(features)]).reshape(1, -1)
     proba = bundle.model.predict_proba(vec)[0][1]
 
-    importance: dict[str, float] = {}
-    latest = get_latest_model_version()
-    if latest and latest.get("features_json"):
-        try:
-            meta = json.loads(latest["features_json"])
-            importance = meta.get("importance", {})
-        except json.JSONDecodeError:
-            pass
-
     return MLResult(
         probability=round(float(proba) * 100, 1),
         model_version=bundle.version,
         sample_count=bundle.sample_count,
         reason="ok",
-        feature_importance=importance,
+        feature_importance={},
     )
 
 

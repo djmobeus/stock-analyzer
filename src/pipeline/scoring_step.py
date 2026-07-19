@@ -9,6 +9,7 @@ from analysis.scoring import market_regime_score, rank_candidates, score_stock
 from config.loader import load_config
 from data.fundamentals import snapshot_from_db
 from db.repositories import upsert_candidates
+from intelligence.why_chosen import build_why_chosen
 from reports.morning_report import write_morning_report
 
 logger = logging.getLogger(__name__)
@@ -41,20 +42,29 @@ def score_universe(
         f = s.features
         f["market_regime_score"] = _get_regime()
         w = weights
-        s.composite_score = round(
+        composite = (
             w.get("support_proximity", 0.25) * f["support_score"]
             + w.get("multi_tf_confluence", 0.20) * (f["confluence"] / 3 * 100)
             + w.get("analyst_upside", 0.15) * f["analyst_upside_score"]
             + w.get("catalyst_proximity", 0.15) * f["catalyst_score"]
             + w.get("news_sentiment", 0.10) * f["news_sentiment_score"]
             + w.get("market_regime", 0.10) * f["market_regime_score"]
-            + w.get("sector_relative", 0.05) * f["sector_relative_score"],
-            2,
+            + w.get("sector_relative", 0.05) * f["sector_relative_score"]
         )
+        if s.conflict_flag:
+            composite -= float(w.get("conflict_penalty", 0) or 0)
+        s.composite_score = round(max(composite, 0), 2)
         scores.append(s)
 
     shadow = rank_candidates(scores, top_n=shadow_n)
     shortlist = rank_candidates(scores, top_n=shortlist_n)
+
+    for s in shadow:
+        s.features["why_chosen"] = build_why_chosen(
+            s.ticker, s.features, s.composite_score
+        )
+        if s.features["why_chosen"].get("name"):
+            s.features["company_name"] = s.features["why_chosen"]["name"]
 
     upsert_candidates(date.today(), shadow)
     report_path = write_morning_report(shortlist, briefing_for, universe_size)

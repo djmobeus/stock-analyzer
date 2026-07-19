@@ -249,3 +249,50 @@ sector_relative:       0.05
 | ADR-013 | 2026-07-06 | No microservices v1 | Accepted |
 | ADR-014 | 2026-07-06 | Private GitHub repo | Accepted |
 | ADR-015 | 2026-07-06 | Cursor Auto for dev | Accepted |
+| ADR-016 | 2026-07-14 | FastAPI+HTMX replaces Streamlit | Accepted |
+| ADR-017 | 2026-07-14 | Single cron + cancel-in-progress | Accepted |
+| ADR-018 | 2026-07-14 | TradingView Lightweight Charts | Accepted |
+| ADR-019 | 2026-07-14 | yfinance SoT; Yahoo/Investing links | Accepted |
+| ADR-020 | 2026-07-14 | Coaching critique loop | Accepted |
+
+---
+
+## ADR-016: FastAPI + HTMX replaces Streamlit (v2)
+
+**Decision:** Primary UI is FastAPI with Jinja/HTMX templates, hosted on Render or Railway. Streamlit is legacy.
+
+**Why:** Streamlit Community Cloud is too slow for daily use; full page re-runs hurt charts and navigation.
+
+**Supersedes:** ADR-004 for primary UI (Streamlit remains optional legacy).
+
+---
+
+## ADR-017: One weekday pipeline; cancel queued duplicates
+
+**Decision:** Prefer two DST-aware crons max; `concurrency.cancel-in-progress: true` so a new schedule does not sit waiting behind a long run forever—or use a single cron plus DST companion with cancel. Late starts still execute (no skip for lateness).
+
+**Why:** Multiple crons + `cancel-in-progress: false` caused queued jobs and confusing “green but empty” mornings.
+
+---
+
+## ADR-018: TradingView Lightweight Charts
+
+**Decision:** Use TradingView Lightweight Charts (JS) in the web app instead of Plotly-in-Streamlit.
+
+**Why:** Zoom/pan UX and mobile behaviour are far better for candlesticks.
+
+---
+
+## ADR-019: yfinance price source of truth; careful external links
+
+**Decision:** Charts and “Latest” prices come from yfinance (GBX). External links: Yahoo Finance quote by default; Investing.com only with an explicit slug map (never search-only).
+
+**Why:** Search URLs dump users on a chooser; Investing.com ≠ Yahoo closes.
+
+---
+
+## ADR-020: Honest coaching critique loop
+
+**Decision:** After shortlist review, user writes analysis; Anthropic Haiku returns structured blunt feedback (correct / wrong / risks). No flattery prompt.
+
+**Why:** User requested a conversation step that challenges their reading of the chart and thesis.

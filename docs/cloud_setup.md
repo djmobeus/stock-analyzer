@@ -1,29 +1,24 @@
-# 100% Cloud Setup — No Local PC Required
+# 100% Cloud Setup — No Local PC Required (v2)
 
-This guide makes the UK Stock Analyzer fully independent of your computer.
-
-## Architecture (all free)
+## Architecture
 
 | Component | Service | Your PC needed? |
 |-----------|---------|-----------------|
-| Nightly scan (~05:00 UK Mon–Fri, email aimed by 07:00) | GitHub Actions | No |
+| Nightly scan (~03:00 UK Mon–Fri, email by ~05:00) | GitHub Actions | No |
 | Database | Supabase PostgreSQL | No |
-| Dashboard (phone/laptop browser) | Streamlit Community Cloud | No |
+| **Web app (primary)** | **Render or Railway (FastAPI)** | No |
 | Morning email | Gmail SMTP from GitHub Actions | No |
+| Legacy dashboard | Streamlit Community Cloud (optional) | No |
 
-**Live dashboard URL:** [https://stock-analyzer-djmobeus.streamlit.app/](https://stock-analyzer-djmobeus.streamlit.app/)
+> **Emails do not depend on the web app.** GitHub Actions sends email. If the web app is asleep/redeploying, you still get the digest when the pipeline finishes.
 
-> **Streamlit “asleep” does not stop emails.** The morning email is sent by **GitHub Actions** around **05:00 UK** (aimed in your inbox by **07:00**) — completely separate from the Streamlit website. If the dashboard asks you to “relaunch”, click it (free tier sleeps after inactivity); that only affects viewing the site, not the nightly scan or email.
+See [webapp_deploy.md](webapp_deploy.md) for FastAPI hosting.
 
 ---
 
 ## Checklist
 
-### 1. Supabase (database) — likely done
-
-- [x] Project created
-- [x] `DATABASE_URL` in local `.env`
-- [ ] Run schema on Supabase if `holdings` table missing:
+### 1. Supabase
 
 ```powershell
 cd "c:\Users\PMouzakis\Dropbox\Stock Analyzer"
@@ -31,132 +26,39 @@ cd "c:\Users\PMouzakis\Dropbox\Stock Analyzer"
 python scripts/init_db.py
 ```
 
-(Uses `DATABASE_URL` from `.env` when set.)
-
 ### 2. GitHub Actions secrets
 
-Repo → **Settings → Secrets and variables → Actions**
+| Secret | Required |
+|--------|----------|
+| `DATABASE_URL` | Yes |
+| `EMAIL_TO` | Yes |
+| `SMTP_USER` / `SMTP_PASSWORD` / `EMAIL_FROM` | Yes |
+| `ANTHROPIC_API_KEY` | Optional (prose + coaching) |
 
-| Secret | Required | Example |
-|--------|----------|---------|
-| `DATABASE_URL` | Yes | `postgresql://postgres:...@db....supabase.co:5432/postgres` |
-| `EMAIL_TO` | Yes | `you@p-mouzakis.com` |
-| `SMTP_USER` | Yes | Your Gmail address |
-| `SMTP_PASSWORD` | Yes | Google [App Password](https://myaccount.google.com/apppasswords) |
-| `EMAIL_FROM` | Yes | Same as SMTP_USER |
-| `SMTP_HOST` | Optional | `smtp.gmail.com` (default) |
-| `SMTP_PORT` | Optional | `587` (default) |
-| `ANTHROPIC_API_KEY` | Optional | For Haiku morning prose |
-| `FINNHUB_API_KEY` | Optional | Not needed for UK |
-
-**PowerShell (gh CLI):**
-
-```powershell
-& "C:\Program Files\GitHub CLI\gh.exe" secret set DATABASE_URL
-& "C:\Program Files\GitHub CLI\gh.exe" secret set EMAIL_TO
-& "C:\Program Files\GitHub CLI\gh.exe" secret set SMTP_USER
-& "C:\Program Files\GitHub CLI\gh.exe" secret set SMTP_PASSWORD
-& "C:\Program Files\GitHub CLI\gh.exe" secret set EMAIL_FROM
-& "C:\Program Files\GitHub CLI\gh.exe" secret set ANTHROPIC_API_KEY
-```
-
-### 3. Push latest code to GitHub
-
-```powershell
-cd "c:\Users\PMouzakis\Dropbox\Stock Analyzer"
-git add -A
-git commit -m "Cloud schedule, email digest, II import"
-git push
-```
-
-### 4. Streamlit Community Cloud (dashboard)
-
-1. Go to [share.streamlit.io](https://share.streamlit.io) → sign in with GitHub
-2. **New app** → repo `djmobeus/stock-analyzer`, branch `main`
-3. Main file: `app/streamlit_app.py`
-4. **Secrets** (TOML):
-
-```toml
-DATABASE_URL = "postgresql://..."
-APP_PASSWORD = "your-chosen-password"
-```
-
-5. Deploy. Bookmark the URL: [https://stock-analyzer-djmobeus.streamlit.app/](https://stock-analyzer-djmobeus.streamlit.app/)
-
-The dashboard reads candidates, observations, and holdings from Supabase — same data as the nightly pipeline.
-
-### 5. Verify GitHub Actions
-
-1. Repo → **Actions** → **Nightly Pipeline** → **Run workflow**
-2. For first test: set **limit** = `20`, **force** = true (~10–15 min)
-3. For production: leave **limit** empty, **force** = false (scheduled 05:00 UK only)
-4. Check logs for `email_status: sent`
-5. Download **morning-report** artifact if needed
-
-### 6. Gmail setup (for morning email)
-
-1. Use a Gmail account as sender (`SMTP_USER`)
-2. Enable 2FA on Google account
-3. Create an **App Password** (not your normal password)
-4. Set `EMAIL_TO` to your inbox at **p-mouzakis.com** (or Gmail)
-
-If you use Google Workspace for `p-mouzakis.com`, SMTP may be `smtp.gmail.com` with your workspace address.
-
----
-
-## Schedule
+### 3. Schedule (v2)
 
 | Setting | Value |
 |---------|-------|
-| Preferred start | **05:00 UK** Mon–Fri |
-| Results by | Aimed before **07:00 UK** |
-| GitHub cron | Early buffer + `04:00`/`05:00` UTC (covers BST/GMT + delays) |
-| Python gate | One successful run per weekday; **does not skip** if cron starts late |
+| Preferred start | ~03:00 UK Mon–Fri |
+| Results aimed by | **05:00 UK** |
+| Crons | One primary UTC cron for BST + one for GMT (DST); **cancel-in-progress: true** |
+| Gate | One successful run/day; late starts still run |
 
-Why 05:00 (not later): most overnight RNS/news is already out by early morning. Starting ~05:00 gives the best chance of finishing before 07:00 even when GitHub starts the job late. A later start would catch a little more pre-open news but would often miss your 07:00 deadline.
+**Why jobs used to pile up:** Multiple crons + `cancel-in-progress: false` left a second run waiting. GitHub also often starts cron 30–90 minutes late.
 
-### Tiered universe (faster daily runs)
+### 4. Web app secrets (Render/Railway)
 
-After the first full bootstrap scan, stocks are stored in `universe_tiers`:
+```
+DATABASE_URL=postgresql://...
+APP_PASSWORD=your-password
+ANTHROPIC_API_KEY=optional
+```
 
-| Tier | Meaning | Re-checked |
-|------|---------|------------|
-| **active** | Passes all filters | Every weekday run |
-| **watch** | Near miss (e.g. low volume, 2–3 analysts) | Every **7 days** |
-| **cold** | Far from filters (REIT, tiny cap, no analysts) | Every **30 days** |
+### 5. Verify
 
-Also checked daily: your **II holdings** and the latest **shadow top 15** candidates.
-
-This cuts daily yfinance calls from ~350 to roughly **80–120 active** names (plus any due watch/cold refreshes).
-
-Run `python scripts/init_db.py` once on Supabase after pulling this update (adds `universe_tiers` table).
-
-You receive:
-- Email to `EMAIL_TO` with prose summary + HTML report
-- Dashboard updated in Supabase
-- Optional Anthropic Haiku narrative if API key set
-
----
-
-## What you can turn off locally
-
-Once cloud is verified:
-
-- Stop local `streamlit run` — use Streamlit Cloud URL instead
-- Stop local nightly runs — GitHub Actions handles it
-- PC can be off overnight and when travelling
-
-Local development remains useful for testing (`--force --limit 5`) but is not required for daily use.
-
----
-
-## Optional features included
-
-| Feature | Config |
-|---------|--------|
-| Anthropic morning prose | `ANTHROPIC_API_KEY` |
-| Email digest | SMTP secrets + `EMAIL_TO` |
-| II holdings import | Streamlit → **Holdings** page (upload CSV) |
+1. Actions → Run workflow (force, empty limit) once after schedule changes
+2. Log contains `status: success` and `email_status: sent` (or `SKIPPED:` if already done)
+3. Open FastAPI URL → login → shortlist shows **names** and today’s scan
 
 ---
 
@@ -164,14 +66,8 @@ Local development remains useful for testing (`--force --limit 5`) but is not re
 
 | Issue | Fix |
 |-------|-----|
-| **No emails for weeks** | Check **Actions → Nightly Pipeline** — runs may **time out at 2h** or overlap. Cancel stuck runs; push latest workflow fix; manual **Run workflow** to test. |
-| **Two runs in progress** | Was caused by `--force` on every scheduled run (fixed). Cancel stuck runs in Actions. |
-| **Job exceeded 2h** | Full universe is slow; latest code uses parallel fetch + 6h timeout. |
-| Email not sent | Check SMTP secrets; verify App Password; search spam folder |
-| Dashboard asleep | Click **Relaunch** on Streamlit — normal on free tier; does **not** affect email |
-| Dashboard empty | Confirm Streamlit `DATABASE_URL` matches GitHub |
-| Pipeline log shows `SKIPPED` / `already_completed_today` | Normal for the 2nd/3rd cron the same day — only one full scan runs |
-| Short green run (~1 min), no email | Open the log and search for `SKIPPED` or `status: skipped`. Push latest schedule-gate fix if still on old `outside_run_window` behaviour. |
-| Pipeline skipped `already_completed_today` | Expected if manual re-run same day |
-| Holdings table error | Run `python scripts/init_db.py` against Supabase |
-| Can't open dashboard | Set `APP_PASSWORD` in Streamlit secrets (see deploy step 4) |
+| Short green run, no email | Search log for `SKIPPED` / `status: skipped` |
+| Two runs queued | Ensure workflow has `cancel-in-progress: true` and only DST pair of crons |
+| App slow | Use FastAPI host, not Streamlit |
+| Blank Latest on holdings | Ticker not in last scan prices; wait for next run or use live fallback |
+| Investing.com wrong page | Use mapped slug or Yahoo link (see data_quality.md) |

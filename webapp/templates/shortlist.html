@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Shortlist — UK Stock Analyzer{% endblock %}
+{% block content %}
+<h1>Morning shortlist</h1>
+{% if scan_date %}
+<p class="muted">Scan date: {{ scan_date }}. Tap a name for why-chosen, chart, and coaching.</p>
+{% else %}
+<p class="error">No scan results yet. Run the GitHub Actions pipeline.</p>
+{% endif %}
+
+{% if rows %}
+<table>
+  <thead>
+    <tr>
+      <th>#</th><th>Name</th><th>Ticker</th><th>Score</th>
+      <th>Support %</th><th>TFs</th><th>Conflict</th><th>ML 8%+</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r.rank }}</td>
+      <td><a href="/stock/{{ r.ticker }}">{{ r.name }}</a></td>
+      <td><a href="{{ r.links.primary }}" target="_blank" rel="noopener">{{ r.ticker }}</a></td>
+      <td>{{ "%.1f"|format(r.score) }}</td>
+      <td>{% if r.support is not none %}{{ "%.1f"|format(r.support) }}{% else %}—{% endif %}</td>
+      <td>{{ r.confluence }} of 3</td>
+      <td>{% if r.conflict %}<span class="warn">Yes</span>{% else %}No{% endif %}</td>
+      <td>{% if r.ml is not none %}{{ r.ml }}%{% else %}Not yet{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

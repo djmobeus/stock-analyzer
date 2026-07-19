@@ -1,17 +1,15 @@
 # Nightly stock screening pipeline
-# Preferred: ~05:00 UK Mon–Fri → email aimed before 07:00 (overnight news included)
-# Extra early cron helps beat GitHub Actions schedule delays
-# Python gate: once per weekday; does not skip when cron starts late
+# Preferred: ~03:00 UK Mon–Fri → email aimed before ~05:00
+# Two UTC crons cover BST/GMT only. cancel-in-progress avoids queued pile-ups.
+# Python gate: once per weekday; late starts still run.
 
 name: Nightly Pipeline
 
 on:
   schedule:
-    # Early buffer (BST: 04:30 UK / GMT: 03:30 UK) — catches overnight news, starts sooner
-    - cron: "30 3 * * 1-5"
-    # 05:00 UK = 04:00 UTC (BST) / 05:00 UTC (GMT)
-    - cron: "0 4 * * 1-5"
-    - cron: "0 5 * * 1-5"
+    # 03:00 UK = 02:00 UTC (BST) / 03:00 UTC (GMT)
+    - cron: "0 2 * * 1-5"
+    - cron: "0 3 * * 1-5"
   workflow_dispatch:
     inputs:
       limit:
@@ -19,15 +17,14 @@ on:
         required: false
         type: string
       force:
-        description: "Run even outside Mon-Fri 05:00 window"
+        description: "Run even outside Mon-Fri morning window"
         required: false
         type: boolean
         default: true
 
-# Prevent overlapping full-universe runs (e.g. both UTC crons when first is still running)
 concurrency:
   group: nightly-pipeline
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   run-pipeline:

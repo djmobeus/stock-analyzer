@@ -1,11 +1,11 @@
 # UK pipeline schedule (Europe/London)
-# Preferred start 05:00 UK Mon–Fri — overnight news in, email aimed by 07:00
-# GitHub cron can start late; gate still runs (does not skip for lateness)
+# Preferred start 03:00 UK Mon–Fri — email aimed by ~05:00 (GitHub cron often +30–90 min)
+# Gate still runs if late (does not skip for lateness)
 schedule:
   run_weekdays: [monday, tuesday, wednesday, thursday, friday]
   skip_weekdays: [saturday, sunday]
-  run_time_uk: "05:00"
-  results_by_hour_uk: 7
+  run_time_uk: "03:00"
+  results_by_hour_uk: 5
 
 scoring:
   support_proximity: 0.25
@@ -15,6 +15,8 @@ scoring:
   news_sentiment: 0.10
   market_regime: 0.10
   sector_relative: 0.05
+  # Optional quality feel: subtract when conflict_flag (0–15 points)
+  conflict_penalty: 5
 
 # Data quality thresholds
 data_quality:

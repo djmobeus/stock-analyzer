@@ -836,6 +836,168 @@ def get_holdings_tickers(source: str = "ii_csv") -> list[str]:
     return [h["ticker"] for h in get_holdings(source)]
 
 
+def get_stock_name(ticker: str) -> str | None:
+    ph = get_placeholder()
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(f"SELECT name FROM stocks WHERE ticker = {ph}", (ticker,))
+        row = cur.fetchone()
+    return row[0] if row and row[0] else None
+
+
+def insert_analysis_note(
+    ticker: str,
+    user_notes: str,
+    agree_with_system: str | None = None,
+    scan_date: date | None = None,
+) -> int:
+    from config.loader import get_database_url
+
+    ph = get_placeholder()
+    now = datetime.now(timezone.utc).isoformat()
+    params = (
+        ticker,
+        scan_date.isoformat() if scan_date else None,
+        user_notes,
+        agree_with_system,
+        now,
+        now,
+    )
+    url = get_database_url()
+    with get_connection() as conn:
+        cur = conn.cursor()
+        if url and (url.startswith("postgresql://") or url.startswith("postgres://")):
+            cur.execute(
+                f"""
+                INSERT INTO analysis_notes
+                    (ticker, scan_date, user_notes, agree_with_system, created_at, updated_at)
+                VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+                RETURNING id
+                """,
+                params,
+            )
+            return int(cur.fetchone()[0])
+        cur.execute(
+            f"""
+            INSERT INTO analysis_notes
+                (ticker, scan_date, user_notes, agree_with_system, created_at, updated_at)
+            VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+            """,
+            params,
+        )
+        return int(cur.lastrowid)
+
+
+def update_analysis_critique(note_id: int, critique_text: str, model: str) -> None:
+    ph = get_placeholder()
+    now = datetime.now(timezone.utc).isoformat()
+    with get_connection() as conn:
+        conn.cursor().execute(
+            f"""
+            UPDATE analysis_notes
+            SET critique_text = {ph}, critique_model = {ph}, updated_at = {ph}
+            WHERE id = {ph}
+            """,
+            (critique_text, model, now, note_id),
+        )
+
+
+def get_analysis_notes(
+    limit: int = 50,
+    ticker: str | None = None,
+    awaiting_critique: bool = False,
+) -> list[dict]:
+    ph = get_placeholder()
+    clauses: list[str] = []
+    params: list = []
+    if ticker:
+        clauses.append(f"ticker = {ph}")
+        params.append(ticker)
+    if awaiting_critique:
+        clauses.append("(critique_text IS NULL OR critique_text = '')")
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    params.append(limit)
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            f"""
+            SELECT id, ticker, scan_date, user_notes, agree_with_system,
+                   critique_text, critique_model, created_at
+            FROM analysis_notes{where}
+            ORDER BY created_at DESC LIMIT {ph}
+            """,
+            tuple(params),
+        )
+        rows = cur.fetchall()
+    return [
+        {
+            "id": r[0],
+            "ticker": r[1],
+            "scan_date": r[2],
+            "user_notes": r[3],
+            "agree_with_system": r[4],
+            "critique_text": r[5],
+            "critique_model": r[6],
+            "created_at": r[7],
+        }
+        for r in rows
+    ]
+
+
+def get_analysis_note(note_id: int) -> dict | None:
+    ph = get_placeholder()
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            f"""
+            SELECT id, ticker, scan_date, user_notes, agree_with_system,
+                   critique_text, critique_model, created_at
+            FROM analysis_notes WHERE id = {ph}
+            """,
+            (note_id,),
+        )
+        r = cur.fetchone()
+    if not r:
+        return None
+    return {
+        "id": r[0],
+        "ticker": r[1],
+        "scan_date": r[2],
+        "user_notes": r[3],
+        "agree_with_system": r[4],
+        "critique_text": r[5],
+        "critique_model": r[6],
+        "created_at": r[7],
+    }
+
+
+def get_shadow_hit_rates() -> dict:
+    """Rough hit rates from shadow candidate outcomes."""
+    with get_connection() as conn:
+        cur = conn.cursor()
+        out = {}
+        for weeks in (2, 4, 8):
+            try:
+                cur.execute(
+                    f"""
+                    SELECT COUNT(*), COALESCE(SUM(target_hit), 0)
+                    FROM outcomes WHERE weeks = {weeks} AND candidate_id IS NOT NULL
+                    """
+                )
+                row = cur.fetchone()
+                n = int(row[0] or 0)
+                hits = int(row[1] or 0)
+                out[f"{weeks}w"] = {
+                    "n": n,
+                    "hits": hits,
+                    "hit_rate": round(hits / n, 3) if n else None,
+                }
+            except Exception:
+                out[f"{weeks}w"] = {"n": 0, "hits": 0, "hit_rate": None}
+    return out
+
+
+
 def get_recent_shadow_tickers(limit: int = 15) -> list[str]:
     """Top shadow-logged candidates from the latest scan."""
     scan_date = get_latest_candidate_scan()

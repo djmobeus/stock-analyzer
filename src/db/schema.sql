@@ -170,6 +170,20 @@ CREATE TABLE IF NOT EXISTS universe_tiers (
 
 CREATE INDEX IF NOT EXISTS idx_universe_tiers_tier ON universe_tiers(tier);
 
+CREATE TABLE IF NOT EXISTS analysis_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker TEXT NOT NULL,
+    scan_date DATE,
+    user_notes TEXT NOT NULL,
+    agree_with_system TEXT,
+    critique_text TEXT,
+    critique_model TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_analysis_notes_ticker ON analysis_notes(ticker);
+
 CREATE TABLE IF NOT EXISTS api_usage (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     provider TEXT NOT NULL,

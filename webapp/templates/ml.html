@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}ML — UK Stock Analyzer{% endblock %}
+{% block content %}
+<h1>Machine learning status</h1>
+<p class="muted">Plain English: the model estimates chance of +8% within 8 weeks — only after enough labelled outcomes.</p>
+
+<div class="card">
+  <h2 style="margin-top:0">Progress to unlock</h2>
+  <p><strong>{{ have }}</strong> / {{ need }} labelled 8-week outcomes.</p>
+  {% if bundle %}
+  <p class="flash">Model <strong>{{ bundle.version }}</strong> is active
+    ({{ bundle.sample_count }} samples, CV {{ "%.1f"|format(bundle.cv_score * 100) }}%).</p>
+  {% else %}
+  <p class="error">Not predicting yet. Use the composite Score column until we reach {{ need }} outcomes.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">Shadow log hit rates</h2>
+  <p class="muted">Automatic top candidates from nightly scans (not your personal trades).</p>
+  <table>
+    <thead><tr><th>Horizon</th><th>Samples</th><th>Hits</th><th>Hit rate</th></tr></thead>
+    <tbody>
+    {% for label, row in hit_rates.items() %}
+      <tr>
+        <td>{{ label }}</td>
+        <td>{{ row.n }}</td>
+        <td>{{ row.hits }}</td>
+        <td>{% if row.hit_rate is not none %}{{ "%.0f"|format(row.hit_rate * 100) }}%{% else %}—{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if importance %}
+<div class="card">
+  <h2 style="margin-top:0">What the model weighs (feature importance)</h2>
+  <ul class="bullets">
+  {% for k, v in importance.items() %}
+    <li>{{ k }}: {{ "%.3f"|format(v) }}</li>
+  {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

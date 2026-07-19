@@ -1,280 +1,100 @@
-# Development Roadmap
-
-Structured task list broken into small, completable items. Work top-to-bottom within each phase.
+# Development Roadmap (Rebuild v2)
 
 **Legend:** `[ ]` todo · `[~]` in progress · `[x]` done
 
----
-
-## Foundation
-
-### Repository and environment
-
-- [x] Create `project_spec.md`
-- [x] Create `docs/architecture.md`
-- [x] Create `docs/decisions.md`
-- [x] Create `docs/progress.md`
-- [x] Create `docs/tasks.md`
-- [x] Create `.cursor/rules`
-- [ ] Create private GitHub repository
-- [ ] Initial git commit and push
-- [ ] Create `requirements.txt` with pinned core dependencies
-- [ ] Create `pyproject.toml` or minimal package config
-- [ ] Create `.env.example` (FINNHUB_API_KEY, optional ANTHROPIC_API_KEY, DATABASE_URL)
-- [ ] Create `.gitignore`
-- [ ] Create `README.md` with setup instructions
-- [ ] Create Python virtual environment and verify install
-
-### Project scaffold
-
-- [ ] Create `src/` package structure (see architecture.md)
-- [ ] Create `config/config.yaml` with composite score weights
-- [ ] Create `data/` directory (gitignored db files)
-- [ ] Create `logs/` directory (gitignored)
-- [ ] Create `reports/` directory
-- [ ] Create `scripts/run_nightly.py` stub
-- [ ] Create `app/streamlit_app.py` stub
-- [ ] Create `tests/` directory with `conftest.py`
+See also: [rebuild_plan.md](rebuild_plan.md), [rebuild_brief.md](rebuild_brief.md), [architecture.md](architecture.md), [ux_spec.md](ux_spec.md).
 
 ---
 
-## Phase 0 — Data validation
+## Phase R1 — Docs
 
-**Goal:** Prove yfinance LSE data is usable with <2% error rate on test set.
-
-- [ ] Create list of 30 representative `.L` tickers (large cap, mid cap, commodities, financials)
-- [ ] Build `src/data/prices.py` — basic yfinance fetch
-- [ ] Log `meta.currency` for each ticker
-- [ ] Build GBX normalisation function (handle GBp, GBX, GBP edge cases)
-- [ ] Build sanity checks: >25% daily jump, zero volume, stale date
-- [ ] Cross-check suspicious tickers against Finnhub quote endpoint
-- [ ] Build quarantine list mechanism (`data_quality_flags` table)
-- [ ] Document failure rate in `docs/phase0_report.md`
-- [ ] Write pytest tests for normalisation (known good/bad examples)
-- [ ] **Exit:** <2% discrepancies on 30-ticker test set
+- [x] `docs/rebuild_brief.md`
+- [x] Rewrite `docs/architecture.md` (v2)
+- [x] Replace `docs/tasks.md` (this file)
+- [x] Append v2 ADRs to `docs/decisions.md`
+- [x] Reset `docs/progress.md`
+- [x] `docs/ux_spec.md`
+- [x] `docs/data_quality.md`
+- [x] Update `docs/cloud_setup.md`, `project_spec.md`, `README.md`
+- [x] `docs/webapp_deploy.md`
 
 ---
 
-## Phase 1 — Core pipeline
+## Phase R0 — Schedule reliability
 
-**Goal:** Nightly job produces indicator table for full filtered universe.
-
-### Database
-
-- [ ] Write `src/db/schema.sql` (all tables from architecture.md)
-- [ ] Build `src/db/connection.py` (SQLite local, Supabase URL for cloud)
-- [ ] Build `src/db/repositories.py` — CRUD helpers
-- [ ] Migration/initialise script
-
-### Universe
-
-- [ ] Build FTSE 100 + FTSE 250 constituent list fetcher
-- [ ] Create `data/exclusions.csv` (dual-listed stocks, trusts, REITs)
-- [ ] Implement filters 1–3: listing, volume ≥500k, market cap ≥£300m
-- [ ] Store filtered universe in `stocks` table
-
-### Price ingestion
-
-- [ ] Batch fetch 2 years daily OHLCV for universe
-- [ ] Apply GBX normalisation and quarantine
-- [ ] Upsert into `daily_prices`
-- [ ] Handle missing data gracefully (log, don't crash)
-
-### Technical analysis
-
-- [ ] Resample daily → weekly → monthly OHLCV
-- [ ] Calculate SMA 20/50/200 per timeframe
-- [ ] Calculate RSI 14, MACD, OBV per timeframe
-- [ ] Detect golden/death cross (50 vs 200 SMA)
-- [ ] Store in `technical_indicators` table
-
-### Pipeline orchestration
-
-- [ ] Build `src/pipeline/nightly.py` — steps 1–5 (universe, prices, indicators)
-- [ ] Build `scripts/run_nightly.py` CLI
-- [ ] Add structured logging
-- [ ] Record `scan_runs` metadata
-- [ ] **Exit:** `python scripts/run_nightly.py` completes for full universe
+- [x] Single DST cron pair (04:00 / 05:00 UTC)
+- [x] `concurrency.cancel-in-progress: true`
+- [x] Late-run gate + `SKIPPED:` in logs
+- [x] Web home: last scan / run status / results-by hour
+- [x] Manual workflow_dispatch remains
 
 ---
 
-## Phase 2 — Fundamentals and news
+## Phase R2 — Replace Streamlit
 
-**Goal:** Candidates show analyst upside and catalyst dates.
-
-### Fundamentals (Finnhub)
-
-- [ ] Register Finnhub free API key
-- [ ] Build `src/data/fundamentals.py` — recommendations, price targets, profile
-- [ ] Implement filter 4: minimum 4 analysts
-- [ ] Implement filter 5: exclude trusts/REITs (sector field + exclusion list)
-- [ ] Implement filter 6: FCF trajectory check (best effort from Finnhub financials)
-- [ ] Cache analyst data 7 days; refresh on earnings weeks
-- [ ] Store in `analyst_data` table
-
-### News and RNS
-
-- [ ] Build `src/data/news.py` — RSS feed parser (Reuters UK, RNS, FT, Proactive)
-- [ ] Map article text to universe tickers (ticker regex + company name map)
-- [ ] Filter noise categories (own shares, voting rights, PDMR)
-- [ ] Store in `news_items` table
-
-### Sentiment
-
-- [ ] Build `src/intelligence/sentiment.py` — VADER on headlines
-- [ ] Add FinBERT scoring for flagged articles (optional batch, CPU)
-- [ ] Cache sentiment by article URL hash (24h)
-
-### Catalysts
-
-- [ ] Build `src/intelligence/catalysts.py` — regex date extraction from RNS
-- [ ] Parse event types: results, AGM, ex-dividend, trading update
-- [ ] Flag catalysts within 6 weeks
-- [ ] Store in `catalysts` table
-- [ ] **Exit:** Each universe stock has analyst data and catalyst scan
+- [x] Scaffold `webapp/` FastAPI + Jinja
+- [x] Login with `APP_PASSWORD`
+- [x] Pages: home, shortlist, stock detail, holdings, notes, ml
+- [x] Deploy docs for Render/Railway
+- [x] Mark Streamlit legacy in README
 
 ---
 
-## Phase 3 — Scoring and shadow logging
+## Phase R3 — Names, links, charts
 
-**Goal:** Ranked candidate list + backtest report.
-
-### Support and resistance
-
-- [ ] Build `src/analysis/support_resistance.py`
-- [ ] Pivot point calculation
-- [ ] Fractal-based S/R (2+ reversals in 12 months)
-- [ ] Distance from nearest support/resistance as %
-
-### Scoring
-
-- [ ] Build `src/analysis/scoring.py` — composite score from config weights
-- [ ] Multi-timeframe confluence score (0–3)
-- [ ] Conflict flag (daily buy vs weekly/monthly sell)
-- [ ] Market regime: FTSE 100 vs 50-day MA
-- [ ] Sector relative strength (4-week return vs sector)
-- [ ] Snapshot weights in `config_snapshots`
-
-### Shadow logging
-
-- [ ] Auto-log top 15 candidates to `candidates` table nightly
-- [ ] Store full feature vector per candidate
-
-### Backtesting
-
-- [ ] Build `scripts/run_backtest.py`
-- [ ] Walk-forward backtest: support + catalyst + confluence ≥2 entry rules
-- [ ] Exit rules: +8% target, -7.5% stop, 8-week max hold
-- [ ] Output report to `reports/backtest_YYYY-MM-DD.md`
-- [ ] **Exit:** Ranked list of 5–10 candidates with backtest summary
+- [x] Company name + ticker in email + UI
+- [x] `data/investing_slugs.json` + Yahoo fallback
+- [x] TradingView Lightweight Charts on stock detail
+- [x] Price source disclaimer
+- [x] Link helpers in `visualization/links.py`
 
 ---
 
-## Phase 4 — User observations
+## Phase R4 — Why shortlisted
 
-**Goal:** User can log trades; outcomes auto-track at 2/4/8 weeks.
-
-### Observation logging
-
-- [ ] Build observation form in Streamlit
-- [ ] Fields: ticker, entry price, buy/watch/avoid, confidence, chart description
-- [ ] Snapshot all technical indicators at log time
-- [ ] Parse chart description via keyword map → structured JSON
-
-### Outcome tracking
-
-- [ ] Build `src/pipeline/outcomes.py`
-- [ ] For each observation: price at 2, 4, 8 weeks
-- [ ] Calculate % gain/loss
-- [ ] Flag target hit and stop hit
-- [ ] Mark correct/incorrect vs prediction
-- [ ] Store in `outcomes` table
-
-### Pattern statistics
-
-- [ ] Calculate rolling hit rate per pattern type
-- [ ] Store in `pattern_stats` table
-- [ ] **Exit:** Log observation → auto outcomes after 2 weeks
+- [x] Build `why_chosen` at score time
+- [x] UI card + email bullets
+- [x] Optional `conflict_penalty` in scoring config
 
 ---
 
-## Phase 5 — Machine learning
+## Phase R5 — ML transparency
 
-**Goal:** ML predictions shown when n ≥ 100 labelled outcomes.
-
-### Embeddings
-
-- [ ] Build `src/intelligence/patterns.py`
-- [ ] Embed chart descriptions with sentence-transformers
-- [ ] Cosine similarity search against historical observations
-- [ ] Template display: "Similar pattern: 10/14 wins, avg +9.1%"
-
-### ML model
-
-- [ ] Build `src/intelligence/ml_model.py`
-- [ ] Feature matrix from observations + shadow logs
-- [ ] Walk-forward cross-validation
-- [ ] Logistic regression at 100+ samples
-- [ ] Random Forest at 300+ samples
-- [ ] Store model artifact and metadata in `model_versions`
-- [ ] Feature importance chart for Streamlit
-- [ ] Display "insufficient data" below threshold
-- [ ] **Exit:** ML probability shown on morning scan when ready
+- [x] `/ml` page: outcomes N/100, model meta, shadow hit rates
+- [x] Plain English inactive vs active
+- [x] Feature importance list
 
 ---
 
-## Phase 6 — Dashboard and cloud deployment
+## Phase R6 — Coaching loop
 
-**Goal:** Dashboard live on Streamlit Cloud; pipeline runs via GitHub Actions.
-
-### Streamlit dashboard
-
-- [ ] `app/streamlit_app.py` — home page with latest scan summary
-- [ ] `pages/1_morning_scan.py` — ranked candidates, expanders, Plotly charts
-- [ ] `pages/2_portfolio.py` — open observations, P&L, alerts
-- [ ] `pages/3_patterns.py` — hit rates, feature importance
-- [ ] `pages/4_lookup.py` — ad-hoc ticker lookup
-- [ ] Connect to Supabase in cloud, SQLite locally
-
-### Morning report
-
-- [ ] Build `src/reports/morning_report.py` — Jinja2 HTML template
-- [ ] Output to `reports/morning_YYYY-MM-DD.html`
-
-### GitHub Actions
-
-- [ ] Create `.github/workflows/nightly.yml` — cron 17:30 UK weekdays
-- [ ] Configure secrets: FINNHUB_API_KEY, DATABASE_URL, optional ANTHROPIC_API_KEY
-- [ ] Fail notification on workflow error
-
-### Supabase setup
-
-- [ ] Create Supabase free project
-- [ ] Run schema migration
-- [ ] Configure DATABASE_URL in GitHub secrets and Streamlit Cloud
-
-### Streamlit Community Cloud
-
-- [ ] Connect GitHub repo to Streamlit Cloud
-- [ ] Configure secrets (DATABASE_URL)
-- [ ] Deploy `app/streamlit_app.py`
-- [ ] **Exit:** Open dashboard on phone; pipeline ran overnight without local PC
-
-### Optional upgrades
-
-- [ ] Add Anthropic Haiku for morning prose summaries
-- [ ] Gmail SMTP morning email digest
-- [ ] Interactive Investor CSV import
+- [x] `analysis_notes` table + repository
+- [x] Honest Haiku critique (`intelligence/coaching.py`)
+- [x] Store critique; show on detail/notes pages
+- [x] Usage logging reuse
 
 ---
 
-## Task sizing guide
+## Phase R7 — UX polish
 
-| Size | Effort | Example |
-|------|--------|---------|
-| S | <2 hours | Add config field, single pytest |
-| M | 2–6 hours | One module (e.g. sentiment.py) |
-| L | 1–2 days | Full phase subsection (e.g. all of Phase 0) |
-| XL | 3–5 days | Complete phase |
+- [x] Holdings single table + “Awaiting scan” for blank prices
+- [x] Consistent terminology (timeframe conflict)
+- [x] Mobile-friendly CSS
+- [x] Clear home status metrics
+- [x] Lookup page (`/lookup`)
+- [x] Chart Daily / Weekly / Monthly + volume
+- [x] Score breakdown on stock detail
+- [x] Notes filters (ticker / awaiting critique)
 
-Update `docs/progress.md` when completing each phase exit criterion.
+---
+
+## Follow-ups (ops / later tuning)
+
+- [x] Earlier morning schedule (~03:00 UK start, aim ~05:00 email)
+- [ ] **Commit + push** rebuild files to GitHub (required before deploy / earlier cron)
+- [ ] Deploy FastAPI to Render/Railway and set secrets → you get a phone URL
+- [ ] `python scripts/init_db.py` on Supabase (analysis_notes) if not done
+- [ ] Expand `investing_slugs.json` as new names appear
+- [ ] Pause Streamlit Cloud when happy with new URL
+- [ ] Review shortlist “quality feel” after a week of why-chosen cards
+- [ ] Optional: spot-check top 10 closes vs Investing.com weekly

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Home — UK Stock Analyzer{% endblock %}
+{% block content %}
+<h1>Morning desk</h1>
+<p class="muted">UK time now: {{ now_uk }}. Email aimed by {{ "%02d"|format(results_by) }}:00 UK on trading days.</p>
+
+<div class="grid">
+  <div class="metric"><span class="muted">Latest scan</span><b>{{ summary.latest_scan_date or "—" }}</b></div>
+  <div class="metric"><span class="muted">Last run</span><b>{{ summary.last_run_status or "—" }}</b></div>
+  <div class="metric"><span class="muted">Observations</span><b>{{ summary.observation_count or 0 }}</b></div>
+  <div class="metric"><span class="muted">8w outcomes</span><b>{{ summary.outcome_8w_count or 0 }}</b></div>
+</div>
+
+{% if summary.finished_at %}
+<p class="muted">Last pipeline finished: {{ summary.finished_at }}</p>
+{% endif %}
+
+<div class="card">
+  <h2 style="margin-top:0">ML status</h2>
+  {% if bundle %}
+  <p>Model <strong>{{ bundle.version }}</strong> active ({{ bundle.sample_count }} samples, CV {{ "%.1f"|format(bundle.cv_score * 100) }}%).</p>
+  {% else %}
+  <p>ML predictions unlock at {{ ml_need }} labelled outcomes ({{ ml_have }}/{{ ml_need }} so far). Rule-based scores still work.</p>
+  {% endif %}
+  <p><a href="/ml">Open ML page →</a></p>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">Anthropic usage (estimate)</h2>
+  <div class="grid">
+    <div class="metric"><span class="muted">{{ usage.month_label }}</span><b>${{ "%.4f"|format(usage.month_usd) }}</b></div>
+    <div class="metric"><span class="muted">Lifetime</span><b>${{ "%.4f"|format(usage.lifetime_usd) }}</b></div>
+    <div class="metric"><span class="muted">Calls this month</span><b>{{ usage.month_calls }}</b></div>
+  </div>
+</div>
+
+<p><a class="btn" href="/shortlist">Open today’s shortlist</a></p>
+{% endblock %}

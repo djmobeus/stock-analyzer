@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Notes — UK Stock Analyzer{% endblock %}
+{% block content %}
+<h1>Analysis notes &amp; critiques</h1>
+
+<form class="card" method="get" action="/notes">
+  <label for="ticker">Filter by ticker</label>
+  <input id="ticker" name="ticker" type="text" value="{{ filter_ticker }}" placeholder="e.g. BT-A.L">
+  <label style="margin-top:0.75rem;font-weight:500">
+    <input type="checkbox" name="awaiting" value="1" {% if awaiting %}checked{% endif %}>
+    Awaiting critique only
+  </label>
+  <p style="margin-top:1rem">
+    <button class="btn" type="submit">Apply</button>
+    <a class="btn secondary" href="/notes">Clear</a>
+  </p>
+</form>
+
+{% if not notes %}
+<p class="muted">No notes match. Open a shortlist stock (or Lookup) and write your analysis.</p>
+{% else %}
+{% for n in notes %}
+<div class="card">
+  <p><a href="/stock/{{ n.ticker }}"><strong>{{ n.ticker }}</strong></a>
+    <span class="muted"> · {{ n.created_at }}</span></p>
+  <p>{{ n.user_notes }}</p>
+  {% if n.critique_text %}
+  <div class="critique"><strong>Coach:</strong><br>{{ n.critique_text }}</div>
+  {% else %}
+  <p class="muted">Awaiting critique.</p>
+  {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

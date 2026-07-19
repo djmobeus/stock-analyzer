@@ -1,32 +1,36 @@
 # UK Stock Analyzer
 
-Nightly screening system for FTSE 100 and FTSE 250 stocks — technical analysis, fundamentals, news sentiment, and machine learning to surface high-probability trade candidates each morning.
+Nightly screening for FTSE 100/250 — technicals, fundamentals, news, and learning over time. Morning email + cloud web app.
 
-**Live dashboard:** [https://stock-analyzer-djmobeus.streamlit.app/](https://stock-analyzer-djmobeus.streamlit.app/)
+**Not financial advice.** Personal analytical tool only.
 
-**Not financial advice.** Analytical tool for personal use only.
+## Status (rebuild v2)
+
+| Layer | Status |
+|-------|--------|
+| Nightly pipeline + email | Active (GitHub Actions + Supabase) |
+| **Primary UI** | **FastAPI + HTMX** (`webapp/`) — deploy on Render/Railway |
+| Streamlit (`app/`) | **Legacy** — do not use as primary |
+
+**Start here:** [docs/rebuild_plan.md](docs/rebuild_plan.md) · [docs/rebuild_brief.md](docs/rebuild_brief.md)
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [project_spec.md](project_spec.md) | Product goals, user profile, features |
-| [docs/architecture.md](docs/architecture.md) | System design, hosting, APIs |
-| [docs/decisions.md](docs/decisions.md) | Technology choices and rationale |
-| [docs/tasks.md](docs/tasks.md) | Development roadmap |
+| [docs/rebuild_plan.md](docs/rebuild_plan.md) | Full rebuild plan (phases R0–R7) |
+| [docs/rebuild_brief.md](docs/rebuild_brief.md) | Why rebuild, goals, success criteria |
+| [project_spec.md](project_spec.md) | Product goals and user profile |
+| [docs/architecture.md](docs/architecture.md) | v2 system design |
+| [docs/ux_spec.md](docs/ux_spec.md) | Screens and coaching loop |
+| [docs/data_quality.md](docs/data_quality.md) | Prices, tickers, filters |
+| [docs/decisions.md](docs/decisions.md) | ADRs |
+| [docs/tasks.md](docs/tasks.md) | Rebuild checklist |
 | [docs/progress.md](docs/progress.md) | Progress tracker |
-| [docs/cloud_setup.md](docs/cloud_setup.md) | **100% cloud setup (no PC required)** |
-| [docs/streamlit_deploy.md](docs/streamlit_deploy.md) | Streamlit Cloud deployment |
+| [docs/cloud_setup.md](docs/cloud_setup.md) | Cloud secrets and schedule |
+| [docs/webapp_deploy.md](docs/webapp_deploy.md) | FastAPI deploy (Render/Railway) |
 
-## Quick start (local development)
-
-### Prerequisites
-
-- Python 3.11+
-- Git
-- Supabase `DATABASE_URL` (or leave empty for local SQLite)
-
-### Setup
+## Quick start (local)
 
 ```powershell
 cd "c:\Users\PMouzakis\Dropbox\Stock Analyzer"
@@ -34,47 +38,38 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
-# Edit .env — add DATABASE_URL (optional Finnhub key)
+# Edit .env — DATABASE_URL, APP_PASSWORD, optional ANTHROPIC_API_KEY
 python scripts/init_db.py
-python scripts/run_phase0_validation.py
-python -m pytest tests/ -v
+python -m pytest tests/ -q
 ```
 
-### Run
+### Pipeline
 
 ```powershell
-python scripts/run_nightly.py --force   # Nightly pipeline (add --limit 5 to test)
-python scripts/run_outcomes.py          # Update 2/4/8-week outcomes
-python scripts/run_backtest.py          # Backtest shadow candidates
-streamlit run app/streamlit_app.py      # Dashboard
+python scripts/run_nightly.py --force --limit 5
 ```
 
-## Hosting (free, PC can be off)
+### Web app (v2)
 
-| Component | Service | Cost |
-|-----------|---------|------|
-| Nightly pipeline | GitHub Actions (cron) | £0 |
-| Dashboard | Streamlit Community Cloud | £0 |
-| Database (cloud) | Supabase free tier | £0 |
+```powershell
+python -m uvicorn webapp.main:app --reload --reload-dir webapp --reload-dir src --reload-dir config
+# open http://127.0.0.1:8000
+```
 
-**Vercel is not used** — it does not support Python batch jobs or long-running scheduled tasks.
+### Legacy Streamlit (optional)
 
-## Learning over time
+```powershell
+streamlit run app/streamlit_app.py
+```
 
-The system improves as you use it:
+## Hosting
 
-- **Shadow logging** — every nightly scan records top candidates automatically
-- **Outcome tracking** — 2/4/8-week results labelled without manual input
-- **Pattern stats** — hit rates per setup type after ~30 samples
-- **ML predictions** — appear after 100+ labelled outcomes
-
-Months 1–3 rely on rule-based composite scoring. ML augments later.
-
-## Cost
-
-- **Infrastructure:** £0/month (GitHub Actions + Streamlit Cloud + Supabase)
-- **Data APIs:** £0 (yfinance, RSS; Finnhub optional)
-- **Optional LLM:** ~£3–5/month (Anthropic Haiku for morning summaries only)
+| Component | Service |
+|-----------|---------|
+| Nightly pipeline | GitHub Actions (~05:00 UK, email by ~07:00) |
+| Database | Supabase PostgreSQL |
+| Web UI | Render or Railway (FastAPI) |
+| Email | Gmail SMTP from Actions |
 
 ## License
 
