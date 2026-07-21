@@ -3,20 +3,21 @@
 {% block content %}
 <h1>Morning shortlist</h1>
 {% if scan_date %}
-<p class="muted">Scan date: {{ scan_date }}. Read <strong>why</strong>, mark Keep/Drop (helps learning), open the chart only for names you’d actually consider.</p>
+<p class="muted">Scan date: {{ scan_date }}. <strong>Drop</strong> hides a name from this list (still saved for learning). <strong>Keep</strong> means it’s worth a closer look.</p>
 {% else %}
 <p class="error">No scan results yet. Run the GitHub Actions pipeline.</p>
 {% endif %}
 
 {% if flash %}<p class="flash">{{ flash }}</p>{% endif %}
 
-{% if rows %}
-{% for r in rows %}
+{% if active_rows %}
+{% for r in active_rows %}
 <div class="card stock-card">
   <div class="stock-card-head">
-    <div>
+    <div class="stock-card-title">
       <h2 style="margin:0">#{{ r.rank }} {{ r.name }}
         {% if r.already_held %}<span class="held-badge">Already held</span>{% endif %}
+        {% if r.verdict == "keep" %}<span class="keep-badge">Kept</span>{% endif %}
       </h2>
       <p class="muted" style="margin:0.25rem 0 0">
         <a href="{{ r.links.primary }}" target="_blank" rel="noopener">{{ r.ticker }}</a>
@@ -26,11 +27,10 @@
         {% if r.conflict %}<span class="warn"> · timeframe conflict</span>{% endif %}
         {% if r.support is not none %} · {{ "%.1f"|format(r.support) }}% from support{% endif %}
         · ML {% if r.ml is not none %}{{ r.ml }}%{% else %}not yet{% endif %}
-        {% if r.verdict %} · your verdict: <strong>{{ r.verdict }}</strong>{% endif %}
       </p>
     </div>
-    <a class="btn" href="/stock/{{ r.ticker }}">Chart &amp; your analysis</a>
   </div>
+  <p><a class="btn" href="/stock/{{ r.ticker }}">Chart &amp; your analysis</a></p>
 
   <h3 class="why-heading">Why shortlisted</h3>
   {% if r.why_bullets %}
@@ -45,12 +45,36 @@
   <form class="feedback-row" method="post" action="/shortlist/feedback">
     <input type="hidden" name="ticker" value="{{ r.ticker }}">
     <input type="hidden" name="scan_date" value="{{ scan_date }}">
+    {% if r.verdict != "keep" %}
     <button class="btn secondary" type="submit" name="verdict" value="keep">Keep</button>
+    {% endif %}
     <button class="btn secondary" type="submit" name="verdict" value="drop">Drop</button>
-    <span class="muted">Quality feel — not a trade order</span>
+    <span class="muted">Drop removes it from this list</span>
   </form>
   {% endif %}
 </div>
 {% endfor %}
+{% elif scan_date %}
+<p class="muted">No names left on your active list — all dropped, or no scan rows.</p>
+{% endif %}
+
+{% if dropped_rows %}
+<details class="card" {% if show_dropped %}open{% endif %}>
+  <summary><strong>{{ dropped_rows|length }} dropped</strong> — tap to show / undo</summary>
+  {% for r in dropped_rows %}
+  <div class="dropped-row">
+    <p style="margin:0.5rem 0">
+      <strong>#{{ r.rank }} {{ r.name }}</strong>
+      <span class="muted">({{ r.ticker }})</span>
+    </p>
+    <form method="post" action="/shortlist/feedback" style="display:inline">
+      <input type="hidden" name="ticker" value="{{ r.ticker }}">
+      <input type="hidden" name="scan_date" value="{{ scan_date }}">
+      <button class="btn secondary" type="submit" name="verdict" value="keep">Undo — Keep</button>
+    </form>
+    <a class="btn secondary" href="/stock/{{ r.ticker }}">Chart</a>
+  </div>
+  {% endfor %}
+</details>
 {% endif %}
 {% endblock %}

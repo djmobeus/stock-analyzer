@@ -183,13 +183,19 @@ async def shortlist(request: Request, _: None = Depends(require_auth)):
             if model_active:
                 ml_prob = predict_probability(features).probability
             ticker = c["ticker"]
+            support = features.get("distance_support_pct")
+            try:
+                if support is not None and float(support) != float(support):
+                    support = None
+            except (TypeError, ValueError):
+                support = None
             rows.append(
                 {
                     "rank": c["rank"],
                     "ticker": ticker,
                     "name": name or ticker,
                     "score": c["composite_score"],
-                    "support": features.get("distance_support_pct"),
+                    "support": support,
                     "confluence": features.get("confluence", 0),
                     "conflict": bool(features.get("conflict_flag")),
                     "ml": ml_prob,
@@ -204,8 +210,10 @@ async def shortlist(request: Request, _: None = Depends(require_auth)):
         request,
         "shortlist.html",
         scan_date=scan_date,
-        rows=rows,
+        active_rows=[r for r in rows if r.get("verdict") != "drop"],
+        dropped_rows=[r for r in rows if r.get("verdict") == "drop"],
         flash=flash,
+        show_dropped=request.query_params.get("show_dropped") == "1",
     )
 
 
@@ -234,9 +242,9 @@ async def shortlist_feedback(
 
         init_database()
         upsert_shortlist_feedback(sd, ticker, verdict)
-    label = "Kept" if verdict == "keep" else "Dropped"
+    label = "Dropped (hidden from list)" if verdict == "drop" else "Kept"
     return RedirectResponse(
-        f"/shortlist?msg={label}+{ticker}",
+        f"/shortlist?msg={label}:+{ticker}",
         status_code=303,
     )
 

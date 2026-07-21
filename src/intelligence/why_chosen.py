@@ -46,7 +46,14 @@ def build_why_chosen(ticker: str, features: dict, composite_score: float) -> dic
     bullets: list[str] = []
     dist = features.get("distance_support_pct")
     if dist is not None:
-        bullets.append(f"Price is {dist:.1f}% from nearest support (closer is usually better).")
+        try:
+            dist_f = float(dist)
+            if dist_f == dist_f:  # not NaN
+                bullets.append(
+                    f"Price is {dist_f:.1f}% from nearest support (closer is usually better)."
+                )
+        except (TypeError, ValueError):
+            pass
     conf = features.get("confluence", 0) or 0
     bullets.append(
         f"Timeframes agree on {conf} of 3 (daily / weekly / monthly bullish rules)."
