@@ -45,6 +45,7 @@ from db.repositories import (  # noqa: E402
     upsert_shortlist_feedback,
 )
 from intelligence.coaching import critique_user_analysis  # noqa: E402
+from intelligence.why_chosen import enrich_why_with_live_catalyst  # noqa: E402
 from intelligence.ml_model import get_feature_importance, load_model_bundle, predict_probability  # noqa: E402
 from intelligence.usage_tracking import usage_display  # noqa: E402
 from visualization.charts import (  # noqa: E402
@@ -183,6 +184,7 @@ async def shortlist(request: Request, _: None = Depends(require_auth)):
             if model_active:
                 ml_prob = predict_probability(features).probability
             ticker = c["ticker"]
+            why = enrich_why_with_live_catalyst(ticker, why)
             support = features.get("distance_support_pct")
             try:
                 if support is not None and float(support) != float(support):
@@ -274,8 +276,11 @@ async def stock_detail(request: Request, ticker: str, _: None = Depends(require_
                     features = json.loads(c.get("features_json") or "{}")
                 except json.JSONDecodeError:
                     features = {}
-                why = features.get("why_chosen") or {}
+                why = enrich_why_with_live_catalyst(
+                    ticker, features.get("why_chosen") or {}
+                )
                 break
+    why = enrich_why_with_live_catalyst(ticker, why)
     name = why.get("name") or features.get("company_name") or get_stock_name(ticker)
     candles, volumes = chart_series(ticker, timeframe=tf)
     notes = get_analysis_notes(limit=10, ticker=ticker)

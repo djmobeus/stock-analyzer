@@ -104,3 +104,40 @@ def build_why_chosen(ticker: str, features: dict, composite_score: float) -> dic
 
 def why_chosen_plain(why: dict) -> str:
     return "\n".join(f"• {b}" for b in why.get("bullets") or [])
+
+
+def enrich_why_with_live_catalyst(ticker: str, why: dict) -> dict:
+    """
+    If stored why-chosen said no catalyst, but DB now has one, fix the bullets
+    without waiting for tomorrow's rescore.
+    """
+    why = dict(why or {})
+    bullets = list(why.get("bullets") or [])
+    catalyst = _nearest_catalyst(ticker)
+    if not catalyst or not catalyst.get("event_date"):
+        return why
+    live = (
+        f"Upcoming catalyst: {catalyst.get('event_type') or 'event'} "
+        f"around {catalyst['event_date']}"
+        + (f" — {catalyst['description']}" if catalyst.get("description") else "")
+        + "."
+    )
+    replaced = False
+    new_bullets: list[str] = []
+    for b in bullets:
+        if "no clear dated catalyst" in b.lower() or (
+            b.lower().startswith("upcoming catalyst:")
+        ):
+            new_bullets.append(live)
+            replaced = True
+        else:
+            new_bullets.append(b)
+    if not replaced:
+        # Insert before the composite-score closing bullet if present
+        if new_bullets and "composite score" in new_bullets[-1].lower():
+            new_bullets.insert(-1, live)
+        else:
+            new_bullets.append(live)
+    why["bullets"] = new_bullets
+    why["catalyst"] = catalyst
+    return why

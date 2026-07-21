@@ -97,8 +97,8 @@ def analyst_upside_score(current_gbx: float, snap: AnalystSnapshot | None, cap_p
     return min(100.0, upside / cap_pct * 100)
 
 
-def catalyst_score(ticker: str, within_weeks: int = 6) -> float:
-    """Score 0–100 based on nearest upcoming catalyst (peak at 2–6 weeks)."""
+def catalyst_score(ticker: str, within_weeks: int = 8) -> float:
+    """Score 0–100 based on nearest upcoming catalyst (peak at 2–8 weeks)."""
     ph = get_placeholder()
     today = date.today()
     horizon = today + timedelta(weeks=within_weeks)
@@ -117,18 +117,18 @@ def catalyst_score(ticker: str, within_weeks: int = 6) -> float:
     if not row or not row[0]:
         return 0.0
     try:
-        event_date = date.fromisoformat(str(row[0]))
+        event_date = date.fromisoformat(str(row[0])[:10])
     except ValueError:
         return 0.0
     days = (event_date - today).days
     weeks = days / 7
     if weeks < 1:
         return 60.0
-    if 2 <= weeks <= 6:
+    if 2 <= weeks <= 8:
         return 100.0
     if weeks < 2:
         return 70.0 + weeks * 15
-    return max(0.0, 100.0 - (weeks - 6) * 20)
+    return max(0.0, 100.0 - (weeks - 8) * 20)
 
 
 def news_sentiment_score(ticker: str) -> float:
