@@ -98,11 +98,11 @@ async def _login_redirect(_request: Request, _exc: _LoginRedirect):
     return RedirectResponse("/login", status_code=303)
 
 
-def _render(request: Request, name: str, status_code: int = 200, **extra):
+def _render(request: Request, template: str, status_code: int = 200, **extra):
     """Starlette 1.3+: TemplateResponse(request, name, context)."""
     return templates.TemplateResponse(
         request,
-        name,
+        template,
         {"authed": _authed(request), **extra},
         status_code=status_code,
     )
