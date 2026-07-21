@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Notes — UK Stock Analyzer{% endblock %}
 {% block content %}
-<h1>Analysis notes &amp; critiques</h1>
+<h1>Your analysis archive</h1>
+<p class="muted">
+  This is <strong>not</strong> the morning shortlist. It lists notes <em>you</em> wrote on a stock’s
+  <a href="/shortlist">Chart &amp; your analysis</a> page, plus the AI coach critique.
+  Empty here just means you have not saved any analyses yet.
+</p>
 
 <form class="card" method="get" action="/notes">
   <label for="ticker">Filter by ticker</label>
@@ -17,7 +22,7 @@
 </form>
 
 {% if not notes %}
-<p class="muted">No notes match. Open a shortlist stock (or Lookup) and write your analysis.</p>
+<p class="muted">No notes yet. Open Shortlist → pick a stock → write your chart notes → Save &amp; get honest critique.</p>
 {% else %}
 {% for n in notes %}
 <div class="card">

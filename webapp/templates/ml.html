@@ -12,6 +12,8 @@
     ({{ bundle.sample_count }} samples, CV {{ "%.1f"|format(bundle.cv_score * 100) }}%).</p>
   {% else %}
   <p class="error">Not predicting yet. Use the composite Score column until we reach {{ need }} outcomes.</p>
+  <p class="muted">Counting only finishes when a logged suggestion is <strong>8 weeks old</strong>.
+    Until then this stays near 0 even if the pipeline runs every day. Shadow hit rates below fill in first (2w / 4w).</p>
   {% endif %}
 </div>
 

@@ -181,6 +181,7 @@ async def shortlist(request: Request, _: None = Depends(require_auth)):
                     "conflict": bool(features.get("conflict_flag")),
                     "ml": ml_prob,
                     "links": research_links(c["ticker"]),
+                    "why_bullets": why.get("bullets") or [],
                 }
             )
     return _render(request, "shortlist.html", scan_date=scan_date, rows=rows)

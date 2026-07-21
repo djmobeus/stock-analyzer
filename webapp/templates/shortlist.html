@@ -3,33 +3,39 @@
 {% block content %}
 <h1>Morning shortlist</h1>
 {% if scan_date %}
-<p class="muted">Scan date: {{ scan_date }}. Tap a name for why-chosen, chart, and coaching.</p>
+<p class="muted">Scan date: {{ scan_date }}. Each card explains <strong>why</strong> it was chosen.
+  Tap <strong>Chart &amp; your analysis</strong> for the interactive chart and coaching form (same as Streamlit expanders).</p>
 {% else %}
 <p class="error">No scan results yet. Run the GitHub Actions pipeline.</p>
 {% endif %}
 
 {% if rows %}
-<table>
-  <thead>
-    <tr>
-      <th>#</th><th>Name</th><th>Ticker</th><th>Score</th>
-      <th>Support %</th><th>TFs</th><th>Conflict</th><th>ML 8%+</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% for r in rows %}
-    <tr>
-      <td>{{ r.rank }}</td>
-      <td><a href="/stock/{{ r.ticker }}">{{ r.name }}</a></td>
-      <td><a href="{{ r.links.primary }}" target="_blank" rel="noopener">{{ r.ticker }}</a></td>
-      <td>{{ "%.1f"|format(r.score) }}</td>
-      <td>{% if r.support is not none %}{{ "%.1f"|format(r.support) }}{% else %}—{% endif %}</td>
-      <td>{{ r.confluence }} of 3</td>
-      <td>{% if r.conflict %}<span class="warn">Yes</span>{% else %}No{% endif %}</td>
-      <td>{% if r.ml is not none %}{{ r.ml }}%{% else %}Not yet{% endif %}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
+{% for r in rows %}
+<div class="card stock-card">
+  <div class="stock-card-head">
+    <div>
+      <h2 style="margin:0">#{{ r.rank }} {{ r.name }}</h2>
+      <p class="muted" style="margin:0.25rem 0 0">
+        <a href="{{ r.links.primary }}" target="_blank" rel="noopener">{{ r.ticker }}</a>
+        · score {{ "%.1f"|format(r.score) }}
+        · timeframes {{ r.confluence }} of 3
+        {% if r.conflict %}<span class="warn"> · timeframe conflict</span>{% endif %}
+        {% if r.support is not none %} · {{ "%.1f"|format(r.support) }}% from support{% endif %}
+        · ML {% if r.ml is not none %}{{ r.ml }}%{% else %}not yet{% endif %}
+      </p>
+    </div>
+    <a class="btn" href="/stock/{{ r.ticker }}">Chart &amp; your analysis</a>
+  </div>
+
+  <h3 class="why-heading">Why shortlisted</h3>
+  {% if r.why_bullets %}
+  <ul class="bullets">
+    {% for b in r.why_bullets %}<li>{{ b }}</li>{% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No why-chosen text for this row (older scan before that feature). Open the chart page anyway.</p>
+  {% endif %}
+</div>
+{% endfor %}
 {% endif %}
 {% endblock %}
