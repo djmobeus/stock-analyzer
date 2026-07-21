@@ -34,6 +34,7 @@ python scripts/init_db.py
 | `EMAIL_TO` | Yes |
 | `SMTP_USER` / `SMTP_PASSWORD` / `EMAIL_FROM` | Yes |
 | `ANTHROPIC_API_KEY` | Optional (prose + coaching) |
+| `APP_BASE_URL` | Optional — your Render URL so morning email links to `/shortlist` |
 
 ### 3. Schedule (v2)
 

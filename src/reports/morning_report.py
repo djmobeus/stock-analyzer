@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import date
 from html import escape
 from pathlib import Path
@@ -87,9 +88,15 @@ def build_morning_report(
             "<li><strong>Timeframes:</strong> Daily / weekly / monthly bullish count.</li>",
             "<li><strong>Timeframe conflict:</strong> Daily bullish but weekly/monthly not.</li>",
             "</ul>",
-            "</body></html>",
         ]
     )
+    app_url = (os.getenv("APP_BASE_URL") or "").rstrip("/")
+    if app_url:
+        lines.append(
+            f"<p><strong>Open the app:</strong> "
+            f"<a href='{escape(app_url)}/shortlist'>{escape(app_url)}/shortlist</a></p>"
+        )
+    lines.append("</body></html>")
     return "\n".join(lines)
 
 

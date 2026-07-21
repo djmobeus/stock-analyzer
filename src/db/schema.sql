@@ -184,6 +184,18 @@ CREATE TABLE IF NOT EXISTS analysis_notes (
 
 CREATE INDEX IF NOT EXISTS idx_analysis_notes_ticker ON analysis_notes(ticker);
 
+CREATE TABLE IF NOT EXISTS shortlist_feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scan_date DATE NOT NULL,
+    ticker TEXT NOT NULL,
+    verdict TEXT NOT NULL,
+    note TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(scan_date, ticker)
+);
+
+CREATE INDEX IF NOT EXISTS idx_shortlist_feedback_scan ON shortlist_feedback(scan_date);
+
 CREATE TABLE IF NOT EXISTS api_usage (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     provider TEXT NOT NULL,

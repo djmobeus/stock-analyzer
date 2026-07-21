@@ -30,15 +30,19 @@ from db.repositories import (  # noqa: E402
     get_analysis_note,
     get_analysis_notes,
     get_candidates_for_scan,
+    get_feedback_summary,
     get_holdings,
+    get_holdings_tickers,
     get_latest_candidate_scan,
     get_latest_price_gbx,
     get_scan_summary,
     get_shadow_hit_rates,
+    get_shortlist_feedback_map,
     get_stock_name,
     insert_analysis_note,
     update_analysis_critique,
     upsert_holdings,
+    upsert_shortlist_feedback,
 )
 from intelligence.coaching import critique_user_analysis  # noqa: E402
 from intelligence.ml_model import get_feature_importance, load_model_bundle, predict_probability  # noqa: E402
@@ -140,6 +144,8 @@ async def home(request: Request, _: None = Depends(require_auth)):
     have = int(summary.get("outcome_8w_count", 0) or 0)
     hour = int(load_config().get("schedule", {}).get("results_by_hour_uk", 7))
     now = datetime.now(UK)
+    hit_rates = get_shadow_hit_rates()
+    feedback = get_feedback_summary()
     return _render(
         request,
         "home.html",
@@ -150,6 +156,9 @@ async def home(request: Request, _: None = Depends(require_auth)):
         ml_have=have,
         results_by=hour,
         now_uk=now.strftime("%Y-%m-%d %H:%M %Z"),
+        hit_rates=hit_rates,
+        feedback=feedback,
+        app_url=os.getenv("APP_BASE_URL", "").rstrip("/"),
     )
 
 
@@ -157,8 +166,11 @@ async def home(request: Request, _: None = Depends(require_auth)):
 async def shortlist(request: Request, _: None = Depends(require_auth)):
     scan_date = get_latest_candidate_scan()
     rows = []
+    flash = request.query_params.get("msg")
     if scan_date:
         model_active = load_model_bundle() is not None
+        held = {t.upper() for t in get_holdings_tickers()}
+        feedback_map = get_shortlist_feedback_map(scan_date)
         for c in get_candidates_for_scan(scan_date, limit=10):
             features = {}
             try:
@@ -170,21 +182,63 @@ async def shortlist(request: Request, _: None = Depends(require_auth)):
             ml_prob = None
             if model_active:
                 ml_prob = predict_probability(features).probability
+            ticker = c["ticker"]
             rows.append(
                 {
                     "rank": c["rank"],
-                    "ticker": c["ticker"],
-                    "name": name or c["ticker"],
+                    "ticker": ticker,
+                    "name": name or ticker,
                     "score": c["composite_score"],
                     "support": features.get("distance_support_pct"),
                     "confluence": features.get("confluence", 0),
                     "conflict": bool(features.get("conflict_flag")),
                     "ml": ml_prob,
-                    "links": research_links(c["ticker"]),
+                    "links": research_links(ticker),
                     "why_bullets": why.get("bullets") or [],
+                    "already_held": ticker.upper() in held,
+                    "price_gbx": get_latest_price_gbx(ticker),
+                    "verdict": feedback_map.get(ticker),
                 }
             )
-    return _render(request, "shortlist.html", scan_date=scan_date, rows=rows)
+    return _render(
+        request,
+        "shortlist.html",
+        scan_date=scan_date,
+        rows=rows,
+        flash=flash,
+    )
+
+
+@app.post("/shortlist/feedback")
+async def shortlist_feedback(
+    request: Request,
+    ticker: Annotated[str, Form()] = "",
+    verdict: Annotated[str, Form()] = "",
+    scan_date: Annotated[str, Form()] = "",
+    _: None = Depends(require_auth),
+):
+    from datetime import date as date_cls
+
+    ticker = _normalise_ticker(ticker) or ticker.strip().upper()
+    if not ticker or verdict not in ("keep", "drop") or not scan_date:
+        return RedirectResponse("/shortlist", status_code=303)
+    try:
+        sd = date_cls.fromisoformat(scan_date[:10])
+    except ValueError:
+        return RedirectResponse("/shortlist", status_code=303)
+    try:
+        upsert_shortlist_feedback(sd, ticker, verdict)
+    except Exception:
+        # Table may not exist yet on old DB — init_database on next boot should add it
+        from db.connection import init_database
+
+        init_database()
+        upsert_shortlist_feedback(sd, ticker, verdict)
+    label = "Kept" if verdict == "keep" else "Dropped"
+    return RedirectResponse(
+        f"/shortlist?msg={label}+{ticker}",
+        status_code=303,
+    )
 
 
 @app.get("/lookup", response_class=HTMLResponse)
@@ -375,6 +429,7 @@ async def ml_page(request: Request, _: None = Depends(require_auth)):
     have = int(summary.get("outcome_8w_count", 0) or 0)
     hit_rates = get_shadow_hit_rates()
     importance = get_feature_importance() or {}
+    feedback = get_feedback_summary()
     return _render(
         request,
         "ml.html",
@@ -383,6 +438,8 @@ async def ml_page(request: Request, _: None = Depends(require_auth)):
         bundle=bundle,
         hit_rates=hit_rates,
         importance=importance,
+        summary=summary,
+        feedback=feedback,
     )
 
 

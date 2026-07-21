@@ -28,7 +28,7 @@ python -m uvicorn webapp.main:app
 2. Runtime: Python 3.11
 3. Build: `pip install -r requirements.txt`
 4. Start: `uvicorn webapp.main:app --host 0.0.0.0 --port $PORT`
-5. Env vars: `DATABASE_URL`, `APP_PASSWORD`, `SESSION_SECRET`, optional `ANTHROPIC_API_KEY`
+5. Env vars: `DATABASE_URL`, `APP_PASSWORD`, `SESSION_SECRET`, optional `ANTHROPIC_API_KEY`, optional `APP_BASE_URL` (your Render URL — adds a shortlist link in the morning email)
 
 ## Railway
 
@@ -39,5 +39,6 @@ python -m uvicorn webapp.main:app
 ## Notes
 
 - Email still comes from GitHub Actions — not from this service
-- Run `python scripts/init_db.py` once after pull (adds `analysis_notes` table)
-- Streamlit Cloud can be paused after you confirm the new URL
+- Run `python scripts/init_db.py` once after pull (adds `analysis_notes` / `shortlist_feedback` tables)
+- Streamlit Cloud can be **paused** once you are happy with the Render URL
+- Free Render sleeps when idle; first open after sleep can take ~30–60s. For snappier mornings, upgrade later.

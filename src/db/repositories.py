@@ -682,6 +682,18 @@ def get_scan_summary() -> dict:
         obs_count = cur.fetchone()[0]
         cur.execute("SELECT COUNT(*) FROM outcomes WHERE weeks = 8")
         outcome_count = cur.fetchone()[0]
+        try:
+            cur.execute("SELECT COUNT(*) FROM candidates")
+            shadow_total = int(cur.fetchone()[0] or 0)
+        except Exception:
+            shadow_total = 0
+        try:
+            cur.execute(
+                "SELECT COUNT(*) FROM outcomes WHERE weeks = 2 AND candidate_id IS NOT NULL"
+            )
+            shadow_2w = int(cur.fetchone()[0] or 0)
+        except Exception:
+            shadow_2w = 0
     scan_date = get_latest_candidate_scan()
     return {
         "last_run_status": run[0] if run else None,
@@ -691,6 +703,8 @@ def get_scan_summary() -> dict:
         "latest_scan_date": scan_date.isoformat() if scan_date else None,
         "observation_count": obs_count,
         "outcome_8w_count": outcome_count,
+        "shadow_candidates_logged": shadow_total,
+        "shadow_outcomes_2w": shadow_2w,
     }
 
 
@@ -997,7 +1011,74 @@ def get_shadow_hit_rates() -> dict:
     return out
 
 
+def upsert_shortlist_feedback(
+    scan_date: date,
+    ticker: str,
+    verdict: str,
+    note: str | None = None,
+) -> None:
+    """Store keep/drop verdict for a shortlist name (learning signal)."""
+    verdict = (verdict or "").strip().lower()
+    if verdict not in ("keep", "drop"):
+        raise ValueError("verdict must be keep or drop")
+    ph = get_placeholder()
+    now = datetime.now(timezone.utc).isoformat()
+    sd = scan_date.isoformat() if hasattr(scan_date, "isoformat") else str(scan_date)
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            f"""
+            INSERT INTO shortlist_feedback (scan_date, ticker, verdict, note, created_at)
+            VALUES ({ph}, {ph}, {ph}, {ph}, {ph})
+            ON CONFLICT (scan_date, ticker) DO UPDATE SET
+                verdict = excluded.verdict,
+                note = excluded.note,
+                created_at = excluded.created_at
+            """,
+            (sd, ticker, verdict, note, now),
+        )
 
+
+def get_shortlist_feedback_map(scan_date: date) -> dict[str, str]:
+    ph = get_placeholder()
+    sd = scan_date.isoformat() if hasattr(scan_date, "isoformat") else str(scan_date)
+    with get_connection() as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                f"""
+                SELECT ticker, verdict FROM shortlist_feedback
+                WHERE scan_date = {ph}
+                """,
+                (sd,),
+            )
+            rows = cur.fetchall()
+        except Exception:
+            return {}
+    return {r[0]: r[1] for r in rows}
+
+
+def get_feedback_summary() -> dict:
+    """Counts of keep/drop judgements (for ML / learning page)."""
+    with get_connection() as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                """
+                SELECT verdict, COUNT(*) FROM shortlist_feedback
+                GROUP BY verdict
+                """
+            )
+            rows = cur.fetchall()
+        except Exception:
+            return {"keep": 0, "drop": 0, "total": 0}
+    out = {"keep": 0, "drop": 0, "total": 0}
+    for verdict, n in rows:
+        key = str(verdict).lower()
+        if key in out:
+            out[key] = int(n)
+        out["total"] += int(n)
+    return out
 def get_recent_shadow_tickers(limit: int = 15) -> list[str]:
     """Top shadow-logged candidates from the latest scan."""
     scan_date = get_latest_candidate_scan()
